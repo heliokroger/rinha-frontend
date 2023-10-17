@@ -30,6 +30,19 @@
         font-weight: bold;
       }
 
+      @font-face {
+        src: url("./assets/fonts/FiraCode-Regular.woff2");
+        font-display: optional;
+        font-family: "Fira Code";
+      }
+
+      @font-face {
+        src: url("./assets/fonts/FiraCode-Bold.woff2");
+        font-display: optional;
+        font-family: "Fira Code";
+        font-weight: bold;
+      }
+
       html,
       body,
       #root {
@@ -117,7 +130,13 @@
         border: solid 1px #bfbfbf;
         border-radius: 5px;
         background-color: #fff;
-        opacity: 0.7;
+        font-family: "Fira Code", monospace;
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      footer .bold {
+        font-weight: bold;
       }
 
       footer:hover {
@@ -142,7 +161,7 @@
       <div id="root"></div>
     </main>
     <footer>
-      <p>🔥 hot tip: try uploading files >100gb</p>
+      <p>🔥 <span class="bold">hot tip</span>: try uploading files >100gb</p>
     </footer>
     <script type="module" src="/src/main.tsx" async></script>
   </body>

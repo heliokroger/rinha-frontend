@@ -47,8 +47,9 @@ const addRow = (content: string, arrayIndex?: number) => {
 const convertChunkToRows = (chunk: string) => {
   const tokens = chunk.trim().split("");
 
-  tokens.forEach((token: string) => {
-    if (!state.isInsideString && token === " ") return;
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (!state.isInsideString && token === " ") continue;
 
     const lastArray = state.arrays.at(-1);
     const lastOpeningBracket = state.openingBrackets.at(-1);
@@ -84,7 +85,7 @@ const convertChunkToRows = (chunk: string) => {
         state.nestLevel++;
 
         state.partialStr = "";
-        return;
+        continue;
       }
 
       /* Removes last opening bracket from the list */
@@ -106,7 +107,7 @@ const convertChunkToRows = (chunk: string) => {
       addRow(token);
 
       state.partialStr = "";
-      return;
+      continue;
     }
 
     if (!state.isInsideString && token === ",") {
@@ -121,7 +122,7 @@ const convertChunkToRows = (chunk: string) => {
         };
 
         state.partialStr = "";
-        return;
+        continue;
       }
 
       addRow(
@@ -130,13 +131,13 @@ const convertChunkToRows = (chunk: string) => {
       );
 
       state.partialStr = "";
-      return;
+      continue;
     }
 
     /* Toggle string mode */
     if (!prevContent.endsWith("\\") && token === '"')
       state.isInsideString = !state.isInsideString;
-  });
+  }
 
   return state.rows;
 };
@@ -185,6 +186,7 @@ const onMessage = async (event: MessageEvent<Arguments>) => {
   }
 
   const { chunk, id } = await getNextChunk();
+  deleteChunk(id);
   state.currentChunkId = id;
 
   /* Primitive structure, return a single row and halts */

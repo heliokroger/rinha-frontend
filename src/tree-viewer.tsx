@@ -12,6 +12,7 @@ import type { JsonLine } from "./types";
 
 import styles from "./tree-viewer.module.scss";
 import Logger from "./workers/logger";
+import { addPerformanceNotification } from "./notifications";
 
 export type TreeViewerProps = {
   initialRows: JsonLine[];
@@ -31,12 +32,9 @@ export default function TreeViewer({
   useLayoutEffect(() => {
     const diff = Math.round(performance.now() - startRenderingTime);
 
-    logger.log(`Fair rendering time ${Math.round(diff)}ms`);
+    logger.log(`Fair rendering time ${diff}ms`);
 
-    const $p = document.createElement("p");
-    $p.innerText = `⏰ render time: ${Math.round(diff)}ms`;
-
-    document.querySelector("footer")!.appendChild($p);
+    addPerformanceNotification("⏰ rendering time: ", diff);
   }, [startRenderingTime]);
 
   useEffect(() => {

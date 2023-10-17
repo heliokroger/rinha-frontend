@@ -8,7 +8,7 @@ self.onmessage = async (event: MessageEvent<File>) => {
 
   const start = performance.now();
 
-  const dest = new WritableStream({
+  const writableStream = new WritableStream({
     async write(chunk) {
       await db.table(Table.Chunks).add({ chunk });
       logger.log("Inserted new chunk");
@@ -20,7 +20,7 @@ self.onmessage = async (event: MessageEvent<File>) => {
   file
     .stream()
     .pipeThrough(new TextDecoderStream())
-    .pipeTo(dest)
+    .pipeTo(writableStream)
     .then(() => {
       const end = performance.now();
 

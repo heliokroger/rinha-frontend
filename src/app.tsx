@@ -4,6 +4,10 @@ import { parseJsonWorker, readJsonWorker, validateJsonWorker } from "./workers";
 import { MAX_FILE_SIZE_FOR_PARSING } from "./constants";
 import { JsonLine } from "./types";
 import db, { Table } from "./db";
+import {
+  addPerformanceNotification,
+  clearNotifications,
+} from "./notifications";
 
 const treeViewer = import("./tree-viewer");
 const TreeViewer = lazy(() => treeViewer);
@@ -14,6 +18,7 @@ export default function App() {
 
   const fileNameRef = useRef("");
   const startRenderingTimeRef = useRef<number | null>(null);
+  const firstChunkLoaded = useRef(false);
 
   useEffect(() => {
     if (showTreeViewer && initialRows) {
@@ -29,6 +34,7 @@ export default function App() {
       fileInput.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
         setInitialRows(null);
+        clearNotifications();
 
         if (target.files && target.files.length) {
           const [file] = target.files;
@@ -64,19 +70,22 @@ export default function App() {
               readJsonWorker.onmessage = (
                 event: MessageEvent<number | null>
               ) => {
-                parseJsonWorker.postMessage({
-                  reset: true,
-                  from: 0,
-                  to: 100,
-                });
+                if (!firstChunkLoaded.current) {
+                  parseJsonWorker.postMessage({
+                    reset: true,
+                    from: 0,
+                    to: 1000,
+                  });
+
+                  firstChunkLoaded.current = true;
+                }
 
                 if (event.data) {
-                  const $p = document.createElement("p");
-                  $p.innerText = `⏰ processing time: ${Math.round(
-                    event.data
-                  )}ms`;
+                  addPerformanceNotification(
+                    "⏰ processing time: ",
+                    Math.round(event.data)
+                  );
 
-                  document.querySelector("footer")!.appendChild($p);
                   readJsonWorker.onmessage = null;
                 }
               };
