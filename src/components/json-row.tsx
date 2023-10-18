@@ -22,10 +22,12 @@ export default function JsonRow({ row }: JsonRowProps) {
     );
 
   const getValueType = (value: string) => {
+    const firstChar = value[0];
+
     if (value.startsWith('"')) return "string";
     if (value === "null") return "null";
     if (value === "false" || value === "true") return "boolean";
-    if (BRACKETS.some((bracket) => value.startsWith(bracket))) return "bracket";
+    if (BRACKETS.has(firstChar)) return "bracket";
 
     return "number";
   };

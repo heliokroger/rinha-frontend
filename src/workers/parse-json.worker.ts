@@ -61,9 +61,9 @@ const convertChunkToRows = (chunk: string) => {
     const isInsideArray = lastOpeningBracket === "[";
 
     /* Tokens that will make the line break */
-    if (!state.isInsideString && BRACKETS.includes(token)) {
+    if (!state.isInsideString && BRACKETS.has(token)) {
       /* New block, increases nest level */
-      if (OPENING_BRACKETS.includes(token)) {
+      if (OPENING_BRACKETS.has(token)) {
         state.openingBrackets.push(token as State["openingBrackets"][number]);
 
         /* Opening of a new array */
@@ -116,7 +116,7 @@ const convertChunkToRows = (chunk: string) => {
       const prevRow = state.rows[lastRowIndex];
 
       /* The comma belongs to a previous closing bracket */
-      if (CLOSING_BRACKETS.includes(prevRow.content)) {
+      if (CLOSING_BRACKETS.has(prevRow.content)) {
         state.rows[lastRowIndex] = {
           ...state.rows[lastRowIndex],
           content: `${prevRow.content},`,
@@ -160,12 +160,10 @@ const onMessage = async (args: Arguments) => {
   }
 
   const nextChunk = getNextChunk()!;
+  const firstChar = nextChunk[0];
 
   /* Primitive structure, return a single row and halts */
-  if (
-    reset &&
-    !OPENING_BRACKETS.some((bracket) => nextChunk.startsWith(bracket))
-  ) {
+  if (reset && !OPENING_BRACKETS.has(firstChar)) {
     self.postMessage([{ content: nextChunk, nestLevel: state.nestLevel }]);
     return;
   }
