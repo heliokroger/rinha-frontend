@@ -6,30 +6,6 @@ const first = vi.fn();
 const get = vi.fn();
 const last = vi.fn();
 
-beforeAll(() => {
-  vi.mock("../db", async () => {
-    const mod = await vi.importActual<typeof import("../db.js")>("../db");
-
-    return {
-      ...mod,
-      default: {
-        table: vi.fn().mockReturnValue({
-          get,
-          delete: vi.fn().mockResolvedValue(undefined),
-          toCollection: vi.fn().mockReturnValue({
-            first,
-            last,
-          }),
-        }),
-      },
-    };
-  });
-});
-
-afterAll(() => {
-  vi.resetAllMocks();
-});
-
 describe("testing parse json worker", () => {
   describe("testing processChunk", () => {
     it("should be able to parse primitive structures", async () => {
