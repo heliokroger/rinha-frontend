@@ -10,10 +10,11 @@ self.onmessage = async (event: MessageEvent<File>) => {
 
   const writableStream = new WritableStream({
     async write(chunk) {
-      await db.table(Table.Chunks).add({ chunk });
-      logger.log("Inserted new chunk");
+      db.table(Table.Chunks)
+        .add({ chunk })
+        .then(() => logger.log("Inserted new chunk"));
 
-      self.postMessage(null);
+      self.postMessage(chunk);
     },
   });
 

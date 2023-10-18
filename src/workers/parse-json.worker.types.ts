@@ -6,7 +6,7 @@ export type State = {
   openingBrackets: ("{" | "[")[];
   nestLevel: number;
   currentChunkId: number;
-  lastChunkId: number;
+  lastChunkId: number | null;
   rows: JsonLine[];
   arrays: { currentIndex: number }[];
   chunkInteraction: {
@@ -20,4 +20,5 @@ export type Arguments = {
   from: number;
   to: number;
   reset: boolean;
+  content?: string;
 };

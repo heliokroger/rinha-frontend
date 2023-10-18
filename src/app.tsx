@@ -3,7 +3,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { parseJsonWorker, readJsonWorker, validateJsonWorker } from "./workers";
 import { MAX_FILE_SIZE_FOR_PARSING } from "./constants";
 import { JsonLine } from "./types";
-import db, { Table } from "./db";
+import { recreate } from "./db";
 import {
   addPerformanceNotification,
   clearNotifications,
@@ -45,6 +45,7 @@ export default function App() {
           if (file.size < MAX_FILE_SIZE_FOR_PARSING) {
             validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
               if (!event.data) {
+                recreate();
                 document.getElementById("error")!.style.display = "block";
               } else {
                 setShowTreeViewer(true);
@@ -58,40 +59,35 @@ export default function App() {
             setShowTreeViewer(true);
           }
 
-          db.table(Table.Chunks)
-            .clear()
-            .then(() => {
-              parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
-                setInitialRows(event.data);
+          parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
+            setInitialRows(event.data);
 
-                parseJsonWorker.onmessage = null;
-              };
+            parseJsonWorker.onmessage = null;
+          };
 
-              readJsonWorker.onmessage = (
-                event: MessageEvent<number | null>
-              ) => {
-                if (!firstChunkLoaded.current) {
-                  parseJsonWorker.postMessage({
-                    reset: true,
-                    from: 0,
-                    to: 1000,
-                  });
+          readJsonWorker.onmessage = (event: MessageEvent<number | string>) => {
+            if (!firstChunkLoaded.current) {
+              parseJsonWorker.postMessage({
+                reset: true,
+                content: event.data,
+                from: 0,
+                to: 1000,
+              });
 
-                  firstChunkLoaded.current = true;
-                }
+              firstChunkLoaded.current = true;
+            }
 
-                if (event.data) {
-                  addPerformanceNotification(
-                    "⏰ processing time: ",
-                    Math.round(event.data)
-                  );
+            if (typeof event.data === "number") {
+              addPerformanceNotification(
+                "⏰ processing time: ",
+                Math.round(event.data)
+              );
 
-                  readJsonWorker.onmessage = null;
-                }
-              };
+              readJsonWorker.onmessage = null;
+            }
+          };
 
-              readJsonWorker.postMessage(file);
-            });
+          readJsonWorker.postMessage(file);
         }
       };
     }

@@ -12,7 +12,7 @@ const initialState: State = {
   partialStr: "",
   nestLevel: 0,
   currentChunkId: 0,
-  lastChunkId: 0,
+  lastChunkId: null,
   arrays: [],
   rows: [],
   chunkInteraction: {},
@@ -37,6 +37,8 @@ const getNextChunk = async () => {
 
   return db.table(Table.Chunks).get(state.currentChunkId);
 };
+
+const FIRST_CHUNK_ID = 1;
 
 const addRow = (content: string, arrayIndex?: number) => {
   const row: JsonLine = { content, nestLevel: state.nestLevel };
@@ -143,38 +145,38 @@ const convertChunkToRows = (chunk: string) => {
 };
 
 const onMessage = async (event: MessageEvent<Arguments>) => {
-  const { from, to, reset } = event.data;
+  const { from, to, reset, content } = event.data;
 
   if (reset) state = structuredClone(initialState);
 
   const previousInteraction = state.chunkInteraction[state.currentChunkId];
 
-  if (state.lastChunkId === 0) state.lastChunkId = (await getLastChunk()).id;
-
-  const isLastInteraction = state.currentChunkId === state.lastChunkId;
   const isRequestedIndexOutOfBounds = to > previousInteraction?.indexRange![1];
 
   /* Needs to request and parse a new chunk */
-  if (
-    previousInteraction &&
-    !isLastInteraction &&
-    isRequestedIndexOutOfBounds
-  ) {
+  if (previousInteraction && isRequestedIndexOutOfBounds) {
     logger.log("New chunk requested");
 
-    state.currentChunkId++;
-    const nextChunk = await getNextChunk();
+    const chunk = await getLastChunk();
+    state.lastChunkId = chunk.id;
 
-    convertChunkToRows(nextChunk.chunk);
-    state.chunkInteraction[state.currentChunkId] = {
-      ...state.chunkInteraction[state.currentChunkId],
-      indexRange: [previousInteraction.indexRange![1], state.rows.length - 1],
-    };
+    const isLastInteraction = state.currentChunkId === state.lastChunkId;
 
-    deleteChunk(nextChunk.id);
+    if (!isLastInteraction) {
+      state.currentChunkId++;
+      const nextChunk = await getNextChunk();
 
-    self.postMessage(state.rows.slice(from, to));
-    return;
+      convertChunkToRows(nextChunk.chunk);
+      state.chunkInteraction[state.currentChunkId] = {
+        ...state.chunkInteraction[state.currentChunkId],
+        indexRange: [previousInteraction.indexRange![1], state.rows.length - 1],
+      };
+
+      deleteChunk(nextChunk.id);
+
+      self.postMessage(state.rows.slice(from, to));
+      return;
+    }
   }
 
   /* The request index is still on previous interactions range */
@@ -185,17 +187,21 @@ const onMessage = async (event: MessageEvent<Arguments>) => {
     return;
   }
 
-  const { chunk, id } = await getNextChunk();
-  deleteChunk(id);
-  state.currentChunkId = id;
+  if (!content)
+    throw new Error("content is required for first parser interaction");
 
   /* Primitive structure, return a single row and halts */
-  if (!from && !OPENING_BRACKETS.some((bracket) => chunk.startsWith(bracket))) {
-    self.postMessage([{ content: chunk, nestLevel: state.nestLevel }]);
+  if (
+    !from &&
+    !OPENING_BRACKETS.some((bracket) => content.startsWith(bracket))
+  ) {
+    self.postMessage([{ content, nestLevel: state.nestLevel }]);
     return;
   }
 
-  const rows = convertChunkToRows(chunk);
+  const rows = convertChunkToRows(content);
+
+  state.currentChunkId = FIRST_CHUNK_ID;
 
   /* Caches the line range present in the chunk */
   state.chunkInteraction[state.currentChunkId] = {
@@ -203,11 +209,14 @@ const onMessage = async (event: MessageEvent<Arguments>) => {
     indexRange: [from, rows.length - 1],
   };
 
+  /* Might not have the id already */
+  deleteChunk(FIRST_CHUNK_ID);
+
   /* The first slice request requires more than one interaction */
-  if (to > state.rows.length - 1 && !isLastInteraction) {
-    onMessage({ ...event, data: { ...event.data, reset: false } });
-    return;
-  }
+  // if (to > state.rows.length - 1 && !isLastInteraction) {
+  //   onMessage({ ...event, data: { ...event.data, reset: false } });
+  //   return;
+  // }
 
   self.postMessage(state.rows.slice(from, to));
 };

@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./app";
-import db, { Table } from "./db";
+import { recreate } from "./db";
 
-db.table(Table.Chunks).clear();
+recreate();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
