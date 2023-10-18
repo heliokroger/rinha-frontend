@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 
-import { parseJsonWorker, readJsonWorker, validateJsonWorker } from "./workers";
+import workers, { WorkerUrl, createWorker } from "./workers";
 import { MAX_FILE_SIZE_FOR_PARSING } from "./constants";
 import { JsonLine } from "./types";
 import { recreate } from "./db";
@@ -43,31 +43,43 @@ export default function App() {
           fileNameRef.current = file.name;
 
           if (file.size < MAX_FILE_SIZE_FOR_PARSING) {
-            validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
+            workers.validateJsonWorker.onmessage = (
+              event: MessageEvent<boolean>
+            ) => {
               if (!event.data) {
+                workers.readJsonWorker.terminate();
+                workers.readJsonWorker = createWorker(WorkerUrl.ReadJsonWorker);
+
+                firstChunkLoaded.current = false;
+
                 recreate();
+
                 document.getElementById("error")!.style.display = "block";
               } else {
                 setShowTreeViewer(true);
               }
 
-              validateJsonWorker.onmessage = null;
+              workers.validateJsonWorker.onmessage = null;
             };
 
-            validateJsonWorker.postMessage(file);
+            workers.validateJsonWorker.postMessage(file);
           } else {
             setShowTreeViewer(true);
           }
 
-          parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
+          workers.parseJsonWorker.onmessage = (
+            event: MessageEvent<JsonLine[]>
+          ) => {
             setInitialRows(event.data);
 
-            parseJsonWorker.onmessage = null;
+            workers.parseJsonWorker.onmessage = null;
           };
 
-          readJsonWorker.onmessage = (event: MessageEvent<number | string>) => {
+          workers.readJsonWorker.onmessage = (
+            event: MessageEvent<number | string>
+          ) => {
             if (!firstChunkLoaded.current) {
-              parseJsonWorker.postMessage({
+              workers.parseJsonWorker.postMessage({
                 reset: true,
                 content: event.data,
                 from: 0,
@@ -83,20 +95,20 @@ export default function App() {
                 Math.round(event.data)
               );
 
-              readJsonWorker.onmessage = null;
+              workers.readJsonWorker.onmessage = null;
             }
           };
 
-          readJsonWorker.postMessage(file);
+          workers.readJsonWorker.postMessage(file);
         }
       };
     }
 
     return () => {
       if (fileInput) fileInput.onchange = null;
-      readJsonWorker.onmessage = null;
-      parseJsonWorker.onmessage = null;
-      validateJsonWorker.onmessage = null;
+      workers.readJsonWorker.onmessage = null;
+      workers.parseJsonWorker.onmessage = null;
+      workers.validateJsonWorker.onmessage = null;
     };
   }, []);
 

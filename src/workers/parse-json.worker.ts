@@ -158,24 +158,30 @@ const onMessage = async (event: MessageEvent<Arguments>) => {
     logger.log("New chunk requested");
 
     const chunk = await getLastChunk();
-    state.lastChunkId = chunk.id;
 
-    const isLastInteraction = state.currentChunkId === state.lastChunkId;
+    if (chunk) {
+      state.lastChunkId = chunk.id;
 
-    if (!isLastInteraction) {
-      state.currentChunkId++;
-      const nextChunk = await getNextChunk();
+      const isLastInteraction = state.currentChunkId === state.lastChunkId;
 
-      convertChunkToRows(nextChunk.chunk);
-      state.chunkInteraction[state.currentChunkId] = {
-        ...state.chunkInteraction[state.currentChunkId],
-        indexRange: [previousInteraction.indexRange![1], state.rows.length - 1],
-      };
+      if (!isLastInteraction) {
+        state.currentChunkId++;
+        const nextChunk = await getNextChunk();
 
-      deleteChunk(nextChunk.id);
+        convertChunkToRows(nextChunk.chunk);
+        state.chunkInteraction[state.currentChunkId] = {
+          ...state.chunkInteraction[state.currentChunkId],
+          indexRange: [
+            previousInteraction.indexRange![1],
+            state.rows.length - 1,
+          ],
+        };
 
-      self.postMessage(state.rows.slice(from, to));
-      return;
+        deleteChunk(nextChunk.id);
+
+        self.postMessage(state.rows.slice(from, to));
+        return;
+      }
     }
   }
 

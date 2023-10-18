@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import type { Index, IndexRange, ListRowRenderer } from "react-virtualized";
 
 import JsonRow from "./components/json-row";
-import { parseJsonWorker } from "./workers";
+import workers from "./workers";
 
 import AutoSizer from "react-virtualized/dist/commonjs/AutoSizer";
 import InfiniteLoader from "react-virtualized/dist/commonjs/InfiniteLoader";
@@ -38,12 +38,12 @@ export default function TreeViewer({
   }, [startRenderingTime]);
 
   useEffect(() => {
-    parseJsonWorker.onmessage = (event) => {
+    workers.parseJsonWorker.onmessage = (event) => {
       setRows((prev) => [...prev, ...event.data]);
     };
 
     return () => {
-      parseJsonWorker.onmessage = null;
+      workers.parseJsonWorker.onmessage = null;
     };
   }, []);
 
@@ -54,7 +54,7 @@ export default function TreeViewer({
   const isRowLoaded = (params: Index) => !!rows[params.index];
 
   const loadMoreRows = async (params: IndexRange) => {
-    parseJsonWorker.postMessage({
+    workers.parseJsonWorker.postMessage({
       from: params.startIndex,
       to: params.stopIndex,
     });
