@@ -1,18 +1,18 @@
-export enum WorkerUrl {
-  ReadJsonWorker = "./read-json.worker.ts",
-  ParseJsonWorker = "./parse-json.worker.ts",
-  ValidateJsonWorker = "./validate-json.worker.ts",
-}
+export const workerUrl = {
+  readJsonWorker: new URL("./read-json.worker.ts", import.meta.url),
+  parseJsonWorker: new URL("./parse-json.worker.ts", import.meta.url),
+  validateJsonWorker: new URL("./validate-json.worker.ts", import.meta.url),
+};
 
-export const createWorker = (url: string) =>
+export const createWorker = (url: URL) =>
   new Worker(new URL(url, import.meta.url), {
     type: "module",
   });
 
 const workers = {
-  readJsonWorker: createWorker("./read-json.worker.ts"),
-  parseJsonWorker: createWorker("./parse-json.worker.ts"),
-  validateJsonWorker: createWorker("./validate-json.worker.ts"),
+  readJsonWorker: createWorker(workerUrl.readJsonWorker),
+  parseJsonWorker: createWorker(workerUrl.parseJsonWorker),
+  validateJsonWorker: createWorker(workerUrl.validateJsonWorker),
 };
 
 export default workers;
