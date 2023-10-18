@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 
-import workers, { createWorker, workerUrl } from "./workers";
+import workers from "./workers";
 import { MAX_FILE_SIZE_FOR_PARSING } from "./constants";
 import { JsonLine } from "./types";
 import { recreate } from "./db";
@@ -48,7 +48,12 @@ export default function App() {
             ) => {
               if (!event.data) {
                 workers.readJsonWorker.terminate();
-                workers.readJsonWorker = createWorker(workerUrl.readJsonWorker);
+                workers.readJsonWorker = new Worker(
+                  new URL("./workers/read-json.worker.ts", import.meta.url),
+                  {
+                    type: "module",
+                  }
+                );
 
                 firstChunkLoaded.current = false;
 
