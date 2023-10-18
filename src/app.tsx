@@ -88,7 +88,7 @@ export default function App() {
                 reset: true,
                 content: event.data,
                 from: 0,
-                to: 1000,
+                to: 100,
               });
 
               firstChunkLoaded.current = true;

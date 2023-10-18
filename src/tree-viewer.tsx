@@ -11,7 +11,7 @@ import WindowScroller from "react-virtualized/dist/commonjs/WindowScroller";
 import type { JsonLine } from "./types";
 
 import styles from "./tree-viewer.module.scss";
-import Logger from "./workers/logger";
+import Logger from "./logger";
 import { addPerformanceNotification } from "./notifications";
 
 export type TreeViewerProps = {

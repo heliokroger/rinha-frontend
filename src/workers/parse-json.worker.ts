@@ -1,7 +1,7 @@
 import { BRACKETS, CLOSING_BRACKETS, OPENING_BRACKETS } from "../constants";
 import db, { Table } from "../db";
 import { JsonLine } from "../types";
-import Logger from "./logger";
+import Logger from "../logger";
 import type { State, Arguments } from "./parse-json.worker.types";
 
 const logger = new Logger("PARSE JSON WORKER");
@@ -193,7 +193,7 @@ const onMessage = async (event: MessageEvent<Arguments>) => {
     return;
   }
 
-  if (!content)
+  if (content === undefined)
     throw new Error("content is required for first parser interaction");
 
   /* Primitive structure, return a single row and halts */
@@ -220,6 +220,10 @@ const onMessage = async (event: MessageEvent<Arguments>) => {
 
   /* The first slice request requires more than one interaction */
   // if (to > state.rows.length - 1 && !isLastInteraction) {
+  //   onMessage({ ...event, data: { ...event.data, reset: false } });
+  //   return;
+  // }
+  // if (to > state.rows.length - 1) {
   //   onMessage({ ...event, data: { ...event.data, reset: false } });
   //   return;
   // }
