@@ -61,9 +61,9 @@ export default function App() {
             validateJsonWorker.onmessage = null;
           };
 
-          setShowTreeViewer(true);
-
           validateJsonWorker.postMessage(file);
+
+          setShowTreeViewer(true);
 
           parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
             setInitialRows(event.data);

@@ -1,4 +1,3 @@
-import { BRACKETS, CLOSING_BRACKETS, OPENING_BRACKETS } from "../constants";
 import { JsonLine } from "../types";
 import Logger from "../logger";
 import type { State, Arguments } from "./parse-json.worker.types";
@@ -61,9 +60,12 @@ const convertChunkToRows = (chunk: string) => {
     const isInsideArray = lastOpeningBracket === "[";
 
     /* Tokens that will make the line break */
-    if (!state.isInsideString && BRACKETS.has(token)) {
+    if (
+      !state.isInsideString &&
+      (token === "{" || token === "[" || token === "}" || token === "]")
+    ) {
       /* New block, increases nest level */
-      if (OPENING_BRACKETS.has(token)) {
+      if (token === "{" || token === "[") {
         state.openingBrackets.push(token as State["openingBrackets"][number]);
 
         /* Opening of a new array */
@@ -116,7 +118,7 @@ const convertChunkToRows = (chunk: string) => {
       const prevRow = state.rows[lastRowIndex];
 
       /* The comma belongs to a previous closing bracket */
-      if (CLOSING_BRACKETS.has(prevRow.content)) {
+      if (prevRow.content === "}" || prevRow.content === "]") {
         state.rows[lastRowIndex] = {
           ...state.rows[lastRowIndex],
           content: `${prevRow.content},`,
@@ -163,7 +165,7 @@ const onMessage = async (args: Arguments) => {
   const firstChar = nextChunk[0];
 
   /* Primitive structure, return a single row and halts */
-  if (reset && !OPENING_BRACKETS.has(firstChar)) {
+  if (reset && firstChar !== "{" && firstChar !== "[") {
     self.postMessage([{ content: nextChunk, nestLevel: state.nestLevel }]);
     return;
   }

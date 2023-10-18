@@ -1,7 +1,6 @@
 import cn from "classnames";
 import type { ReactNode } from "react";
 import styles from "./json-row.module.scss";
-import { BRACKETS } from "../constants";
 import { JsonLine } from "../types";
 
 export type JsonRowProps = {
@@ -27,7 +26,13 @@ export default function JsonRow({ row }: JsonRowProps) {
     if (value.startsWith('"')) return "string";
     if (value === "null") return "null";
     if (value === "false" || value === "true") return "boolean";
-    if (BRACKETS.has(firstChar)) return "bracket";
+    if (
+      firstChar === "{" ||
+      firstChar === "[" ||
+      firstChar === "}" ||
+      firstChar === "]"
+    )
+      return "bracket";
 
     return "number";
   };
