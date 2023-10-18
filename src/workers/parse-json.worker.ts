@@ -1,5 +1,4 @@
 import { BRACKETS, CLOSING_BRACKETS, OPENING_BRACKETS } from "../constants";
-import db, { Table } from "../db";
 import { JsonLine } from "../types";
 import Logger from "../logger";
 import type { State, Arguments } from "./parse-json.worker.types";
@@ -11,34 +10,34 @@ const initialState: State = {
   openingBrackets: [],
   partialStr: "",
   nestLevel: 0,
-  currentChunkId: 0,
-  lastChunkId: null,
+  currentChunkIndex: 0,
+  bytesOffset: 0,
   arrays: [],
   rows: [],
   chunkInteraction: {},
+  file: null,
 };
 
 let state = structuredClone(initialState);
 
-const getLastChunk = async () => db.table(Table.Chunks).toCollection().last();
+export const CHUNK_SIZE = 1_000; // 1kb
 
-const deleteChunk = (id: number) => {
-  db.table(Table.Chunks)
-    .delete(id)
-    .then(() => {
-      logger.log("Deleted chunk", id);
-    });
-};
+const fileReader = new FileReaderSync();
 
-const getNextChunk = async () => {
-  if (state.currentChunkId === 0) {
-    return db.table(Table.Chunks).toCollection().first();
+const getNextChunk = () => {
+  if (state.file) {
+    const blob = state.file.slice(
+      state.bytesOffset,
+      state.bytesOffset + CHUNK_SIZE
+    );
+
+    state.bytesOffset += CHUNK_SIZE;
+
+    return fileReader.readAsText(blob);
   }
 
-  return db.table(Table.Chunks).get(state.currentChunkId);
+  return null;
 };
-
-const FIRST_CHUNK_ID = 1;
 
 const addRow = (content: string, arrayIndex?: number) => {
   const row: JsonLine = { content, nestLevel: state.nestLevel };
@@ -140,95 +139,57 @@ const convertChunkToRows = (chunk: string) => {
     if (!prevContent.endsWith("\\") && token === '"')
       state.isInsideString = !state.isInsideString;
   }
-
-  return state.rows;
 };
 
-const onMessage = async (event: MessageEvent<Arguments>) => {
-  const { from, to, reset, content } = event.data;
+const onMessage = async (args: Arguments) => {
+  const { from, to, file, reset } = args;
 
   if (reset) state = structuredClone(initialState);
+  if (file) state.file = file;
 
-  const previousInteraction = state.chunkInteraction[state.currentChunkId];
-
+  const previousInteraction = state.chunkInteraction[state.currentChunkIndex];
+  const isLastInteraction = state.bytesOffset + CHUNK_SIZE > state.file!.size;
   const isRequestedIndexOutOfBounds = to > previousInteraction?.indexRange![1];
 
-  /* Needs to request and parse a new chunk */
-  if (previousInteraction && isRequestedIndexOutOfBounds) {
-    logger.log("New chunk requested");
-
-    const chunk = await getLastChunk();
-
-    if (chunk) {
-      state.lastChunkId = chunk.id;
-
-      const isLastInteraction = state.currentChunkId === state.lastChunkId;
-
-      if (!isLastInteraction) {
-        state.currentChunkId++;
-        const nextChunk = await getNextChunk();
-
-        convertChunkToRows(nextChunk.chunk);
-        state.chunkInteraction[state.currentChunkId] = {
-          ...state.chunkInteraction[state.currentChunkId],
-          indexRange: [
-            previousInteraction.indexRange![1],
-            state.rows.length - 1,
-          ],
-        };
-
-        deleteChunk(nextChunk.id);
-
-        self.postMessage(state.rows.slice(from, to));
-        return;
-      }
-    }
-  }
-
   /* The request index is still on previous interactions range */
-  if (previousInteraction) {
-    logger.log("Got cached rows for chunk", state.currentChunkId);
+  if (previousInteraction && !isRequestedIndexOutOfBounds) {
+    logger.log("Got cached rows for chunk", state.currentChunkIndex);
 
     self.postMessage(state.rows.slice(from, to));
     return;
   }
 
-  if (content === undefined)
-    throw new Error("content is required for first parser interaction");
+  const nextChunk = getNextChunk()!;
 
   /* Primitive structure, return a single row and halts */
   if (
-    !from &&
-    !OPENING_BRACKETS.some((bracket) => content.startsWith(bracket))
+    reset &&
+    !OPENING_BRACKETS.some((bracket) => nextChunk.startsWith(bracket))
   ) {
-    self.postMessage([{ content, nestLevel: state.nestLevel }]);
+    self.postMessage([{ content: nextChunk, nestLevel: state.nestLevel }]);
     return;
   }
 
-  const rows = convertChunkToRows(content);
-
-  state.currentChunkId = FIRST_CHUNK_ID;
+  convertChunkToRows(nextChunk);
 
   /* Caches the line range present in the chunk */
-  state.chunkInteraction[state.currentChunkId] = {
-    ...state.chunkInteraction[state.currentChunkId],
-    indexRange: [from, rows.length - 1],
+  state.chunkInteraction[state.currentChunkIndex] = {
+    ...state.chunkInteraction[state.currentChunkIndex],
+    indexRange: [
+      previousInteraction?.indexRange?.[1] ?? 0,
+      state.rows.length - 1,
+    ],
   };
 
-  /* Might not have the id already */
-  deleteChunk(FIRST_CHUNK_ID);
+  state.currentChunkIndex++;
 
-  /* The first slice request requires more than one interaction */
-  // if (to > state.rows.length - 1 && !isLastInteraction) {
-  //   onMessage({ ...event, data: { ...event.data, reset: false } });
-  //   return;
-  // }
-  // if (to > state.rows.length - 1) {
-  //   onMessage({ ...event, data: { ...event.data, reset: false } });
-  //   return;
-  // }
+  /* Number of lines requested is greater than the chunk size */
+  if (to > state.rows.length - 1 && !isLastInteraction) {
+    onMessage({ ...args, reset: false });
+    return;
+  }
 
   self.postMessage(state.rows.slice(from, to));
 };
 
-self.onmessage = onMessage;
+self.onmessage = (event: MessageEvent<Arguments>) => onMessage(event.data);

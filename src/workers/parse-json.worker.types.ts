@@ -5,8 +5,7 @@ export type State = {
   partialStr: string;
   openingBrackets: ("{" | "[")[];
   nestLevel: number;
-  currentChunkId: number;
-  lastChunkId: number | null;
+  currentChunkIndex: number;
   rows: JsonLine[];
   arrays: { currentIndex: number }[];
   chunkInteraction: {
@@ -14,11 +13,13 @@ export type State = {
       indexRange?: [number, number];
     };
   };
+  file: File | null;
+  bytesOffset: number;
 };
 
 export type Arguments = {
   from: number;
   to: number;
   reset: boolean;
-  content?: string;
+  file?: File;
 };
