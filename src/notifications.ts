@@ -6,7 +6,7 @@ export const addPerformanceNotification = (message: string, ms: number) => {
   $p.innerText = message;
 
   const $span = document.createElement("span");
-  $span.innerText = `${ms}ms`;
+  $span.innerText = `${Math.round(ms)}ms`;
   $span.className = "bold";
 
   $p.appendChild($span);

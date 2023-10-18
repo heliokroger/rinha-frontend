@@ -1,12 +1,17 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 
 import { parseJsonWorker, validateJsonWorker } from "./workers";
-import { MAX_FILE_SIZE_FOR_PARSING } from "./constants";
 import { JsonLine } from "./types";
-import { clearNotifications } from "./notifications";
+import {
+  addPerformanceNotification,
+  clearNotifications,
+} from "./notifications";
 
 const treeViewer = import("./tree-viewer");
 const TreeViewer = lazy(() => treeViewer);
+
+const $content = document.querySelector(".center-content")! as HTMLElement;
+const $root = document.getElementById("root")!;
 
 export default function App() {
   const [showTreeViewer, setShowTreeViewer] = useState<null | boolean>(null);
@@ -18,8 +23,8 @@ export default function App() {
 
   useEffect(() => {
     if (showTreeViewer && initialRows) {
-      document.querySelector(".center-content")?.remove();
-      document.getElementById("root")!.style.display = "block";
+      $content.style.display = "none";
+      $root.style.display = "block";
     }
   }, [showTreeViewer, initialRows]);
 
@@ -38,23 +43,27 @@ export default function App() {
           startRenderingTimeRef.current = performance.now();
           fileNameRef.current = file.name;
 
-          if (file.size < MAX_FILE_SIZE_FOR_PARSING) {
-            validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
-              if (!event.data) {
-                firstChunkLoaded.current = false;
+          validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
+            if (!event.data) {
+              firstChunkLoaded.current = false;
 
-                document.getElementById("error")!.style.display = "block";
-              } else {
-                setShowTreeViewer(true);
-              }
+              setShowTreeViewer(false);
+              $content.style.display = "flex";
+              $root.style.display = "none";
+              document.getElementById("error")!.style.display = "block";
+            }
 
-              validateJsonWorker.onmessage = null;
-            };
+            addPerformanceNotification(
+              "⏰ total parsing time: ",
+              performance.now() - startRenderingTimeRef.current!
+            );
 
-            validateJsonWorker.postMessage(file);
-          } else {
-            setShowTreeViewer(true);
-          }
+            validateJsonWorker.onmessage = null;
+          };
+
+          setShowTreeViewer(true);
+
+          validateJsonWorker.postMessage(file);
 
           parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
             setInitialRows(event.data);

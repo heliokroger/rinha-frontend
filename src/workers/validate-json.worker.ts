@@ -1,5 +1,10 @@
 import Logger from "../logger";
 
+declare const FileReaderSync: {
+  prototype: FileReaderSync;
+  new (): FileReaderSync;
+};
+
 const logger = new Logger("VALIDATE JSON WORKER");
 
 self.onmessage = (event: MessageEvent<File>) => {
