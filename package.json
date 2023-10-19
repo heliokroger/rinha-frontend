@@ -9,9 +9,6 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest",
-    "asbuild:debug": "asc assembly/index.ts --target debug",
-    "asbuild:release": "asc assembly/index.ts --target release",
-    "asbuild": "npm run asbuild:debug && npm run asbuild:release",
     "start": "npx serve ."
   },
   "dependencies": {
@@ -27,7 +24,6 @@
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vitejs/plugin-react-swc": "^3.3.2",
-    "assemblyscript": "^0.27.14",
     "eslint": "^8.45.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
@@ -35,11 +31,5 @@
     "typescript": "^5.0.2",
     "vite": "^4.4.5",
     "vitest": "^0.34.6"
-  },
-  "exports": {
-    ".": {
-      "import": "./build/release.js",
-      "types": "./build/release.d.ts"
-    }
   }
 }
