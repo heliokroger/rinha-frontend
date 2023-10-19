@@ -167,6 +167,4 @@ self.onmessage = (event: MessageEvent<File>) => {
       `Finished validation in ${Math.round(performance.now() - start)}ms`
     );
   }
-
-  console.log("headstart >>", performance.now() - start);
 };
