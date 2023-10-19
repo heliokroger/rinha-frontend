@@ -1,24 +1,6 @@
+import { validateChunk } from "../../build/debug";
 import Logger from "../logger";
-
-type State = {
-  openBrackets: string[];
-  isInsideString: boolean;
-  isInsideNumber: boolean;
-  partialSymbol: string;
-  targetSymbol: string;
-  numberHasMinusSign: boolean;
-  isDecimalNumber: boolean;
-};
-
-const state: State = {
-  openBrackets: [],
-  isInsideString: false,
-  isInsideNumber: false,
-  numberHasMinusSign: false,
-  isDecimalNumber: false,
-  partialSymbol: "",
-  targetSymbol: "",
-};
+import type { State } from "./validate-json.worker.types";
 
 const logger = new Logger("VALIDATE JSON WORKER");
 
@@ -34,11 +16,22 @@ const symbolsByFirstLetter = {
 
 /*
   TODO:
-  - Parse objects (require key-value pairs within curly braces)
-  - Require comma after every key-value pair (except the last one)
-  - Require comma for every array item
+  [] Parse objects (require key-value pairs within curly braces)
+  [] Require comma after every key-value pair (except the last one)
+  [] Require comma for every array item (works for false, true, null, strings, objects, arrays)
 */
 self.onmessage = (event: MessageEvent<File>) => {
+  const state: State = {
+    openBrackets: [],
+    isInsideString: false,
+    isInsideNumber: false,
+    numberHasMinusSign: false,
+    isDecimalNumber: false,
+    partialSymbol: "",
+    targetSymbol: "",
+    requireComma: false,
+  };
+
   const file = event.data;
   const start = performance.now();
 
@@ -49,116 +42,137 @@ self.onmessage = (event: MessageEvent<File>) => {
       const slice = file.slice(i, i + CHUNK_SIZE);
 
       const chunk = fileReader.readAsText(slice);
-      const tokens = chunk.split("");
 
-      for (let j = 0; j < tokens.length; j++) {
-        const token = tokens[j];
-        const prevToken = tokens[j - 1];
+      validateChunk(chunk);
 
-        if (token === " ") continue;
+      // const tokens = chunk.split("");
 
-        if (token === '"') {
-          if (prevToken === "\\" && state.isInsideString) continue;
+      // for (let j = 0; j < tokens.length; j++) {
+      //   const token = tokens[j];
+      //   const prevToken = tokens[j - 1];
 
-          state.isInsideString = !state.isInsideString;
-        }
+      //   const lastOpenBracket = state.openBrackets.at(-1);
+      //   const isInsideArray = lastOpenBracket === "[";
 
-        if (state.partialSymbol) {
-          const nextToken = state.targetSymbol[state.partialSymbol.length];
+      //   if (token === " ") continue;
 
-          if (token === nextToken) {
-            state.partialSymbol += token;
+      //   if (state.requireComma) {
+      //     if (token !== "," && token !== "]" && token !== "}")
+      //       throw new Error(`, expected, got ${token}`);
 
-            if (state.partialSymbol.length === state.targetSymbol.length) {
-              state.partialSymbol = "";
-              state.targetSymbol = "";
-            }
-          } else {
-            throw new Error(`unexpected token ${token}`);
-          }
-        }
+      //     state.requireComma = false;
+      //   }
 
-        if (!state.isInsideString) {
-          switch (token) {
-            case "0":
-            case "1":
-            case "2":
-            case "3":
-            case "4":
-            case "5":
-            case "6":
-            case "7":
-            case "8":
-            case "9":
-            case "-":
-            case ".":
-              if (token === "-") {
-                if (!state.numberHasMinusSign) {
-                  state.numberHasMinusSign = true;
-                } else {
-                  throw new Error(`unexpected token ${token}`);
-                }
-              }
+      //   if (token === '"') {
+      //     if (prevToken === "\\" && state.isInsideString) continue;
 
-              if (token === ".") {
-                if (!state.isDecimalNumber) {
-                  state.isDecimalNumber = true;
-                } else {
-                  throw new Error(`unexpected token ${token}`);
-                }
-              }
+      //     state.isInsideString = !state.isInsideString;
+      //     if (!state.isInsideString && isInsideArray) state.requireComma = true;
+      //   }
 
-              if (!state.isInsideNumber) state.isInsideNumber = true;
+      //   if (state.partialSymbol) {
+      //     const nextToken = state.targetSymbol[state.partialSymbol.length];
 
-              break;
-            case "{":
-            case "[":
-              state.openBrackets.push(token);
-              break;
-            case "}":
-            case "]": {
-              if (prevToken === ",")
-                throw new Error(`unexpected token ${token}`);
+      //     if (token === nextToken) {
+      //       state.partialSymbol += token;
 
-              const lastOpenBracket = state.openBrackets.at(-1);
+      //       if (state.partialSymbol.length === state.targetSymbol.length) {
+      //         state.partialSymbol = "";
+      //         state.targetSymbol = "";
 
-              const isObjectEnd = lastOpenBracket === "{" && token === "}";
-              const isArrayEnd = lastOpenBracket === "[" && token === "]";
+      //         if (isInsideArray) state.requireComma = true;
+      //       }
+      //     } else {
+      //       throw new Error(`unexpected token ${token}`);
+      //     }
+      //   }
 
-              if (isObjectEnd || isArrayEnd) {
-                state.openBrackets.pop();
-                break;
-              }
+      //   if (!state.isInsideString) {
+      //     switch (token) {
+      //       case "0":
+      //       case "1":
+      //       case "2":
+      //       case "3":
+      //       case "4":
+      //       case "5":
+      //       case "6":
+      //       case "7":
+      //       case "8":
+      //       case "9":
+      //       case "-":
+      //       case ".":
+      //         if (token === "-") {
+      //           if (!state.numberHasMinusSign) {
+      //             state.numberHasMinusSign = true;
+      //           } else {
+      //             throw new Error(`unexpected token ${token}`);
+      //           }
+      //         }
 
-              throw new Error(`unexpected token ${token}`);
-            }
-            case ",":
-              if (state.isInsideNumber) {
-                state.numberHasMinusSign = false;
-                state.isInsideNumber = false;
-                state.isDecimalNumber = false;
-              }
+      //         if (token === ".") {
+      //           if (!state.isDecimalNumber) {
+      //             state.isDecimalNumber = true;
+      //           } else {
+      //             throw new Error(`unexpected token ${token}`);
+      //           }
+      //         }
 
-              if (prevToken === ",")
-                throw new Error(`unexpected token ${token}`);
-              break;
-            case "f":
-            case "t":
-            case "n":
-              state.targetSymbol = symbolsByFirstLetter[token];
-              state.partialSymbol = token;
+      //         if (!state.isInsideNumber) state.isInsideNumber = true;
 
-              break;
-            case "\n":
-              if (state.isInsideString)
-                throw new Error("multiline strings are not allowed");
-              break;
-            default:
-              if (state.isInsideNumber)
-                throw new Error(`unexpected token ${token}`);
-          }
-        }
-      }
+      //         break;
+      //       case "{":
+      //       case "[":
+      //         state.openBrackets.push(token);
+      //         break;
+      //       case "}":
+      //       case "]": {
+      //         if (prevToken === ",")
+      //           throw new Error(`unexpected token ${token}`);
+
+      //         const isObjectEnd = lastOpenBracket === "{" && token === "}";
+      //         const isArrayEnd = lastOpenBracket === "[" && token === "]";
+
+      //         if (isObjectEnd || isArrayEnd) {
+      //           state.openBrackets.pop();
+      //           break;
+      //         }
+
+      //         const nextOpenBracket = state.openBrackets.at(-1);
+      //         if (nextOpenBracket === "[") state.requireComma = true;
+
+      //         throw new Error(`unexpected token ${token}`);
+      //       }
+      //       case ",":
+      //         if (state.isInsideNumber) {
+      //           state.numberHasMinusSign = false;
+      //           state.isInsideNumber = false;
+      //           state.isDecimalNumber = false;
+      //         }
+
+      //         /*
+      //           TODO: Find a way to validate previous character
+      //           Examples: [1, , 3]
+
+      //           Maybe save last char different than whitespace in the state?
+      //         */
+      //         break;
+      //       case "f":
+      //       case "t":
+      //       case "n":
+      //         state.targetSymbol = symbolsByFirstLetter[token];
+      //         state.partialSymbol = token;
+
+      //         break;
+      //       case "\n":
+      //         if (state.isInsideString)
+      //           throw new Error("multiline strings are not allowed");
+      //         break;
+      //       default:
+      //         if (state.isInsideNumber)
+      //           throw new Error(`unexpected token ${token}`);
+      //     }
+      //   }
+      // }
 
       i += CHUNK_SIZE;
     }
@@ -169,6 +183,7 @@ self.onmessage = (event: MessageEvent<File>) => {
 
     self.postMessage(true);
   } catch (err) {
+    console.error(err);
     self.postMessage(false);
   } finally {
     logger.log(

@@ -2,19 +2,23 @@ import ParseJsonWorker from "./parse-json.worker?worker";
 
 const worker = new ParseJsonWorker();
 
-const first = vi.fn();
-const get = vi.fn();
-const last = vi.fn();
+const readAsText = vi.fn().mockReturnValue('"hello"');
+
+beforeAll(() => {
+  vi.stubGlobal(
+    "FileReaderSync",
+    vi.fn(() => ({
+      readAsText,
+    }))
+  );
+});
 
 describe("testing parse json worker", () => {
   describe("testing processChunk", () => {
-    it("should be able to parse primitive structures", async () => {
-      const json = { id: 1, chunk: '"hello"' };
+    it.only("should be able to parse primitive structures", async () => {
+      const file = { size: 100, slice: vi.fn() };
 
-      first.mockResolvedValue(json);
-      last.mockResolvedValue(json);
-
-      worker.postMessage({ reset: true });
+      worker.postMessage({ reset: true, file });
 
       const data = await new Promise((resolve) => {
         worker.onmessage = (event) => {
