@@ -8,12 +8,6 @@ export const CHUNK_SIZE = 1_024 * 1_000; // 1mb
 
 const fileReader = new FileReaderSync();
 
-const symbolsByFirstLetter = {
-  f: "false",
-  t: "true",
-  n: "null",
-};
-
 /*
   TODO:
   [] Parse objects (require key-value pairs within curly braces)
