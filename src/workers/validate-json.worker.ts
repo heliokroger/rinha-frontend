@@ -32,6 +32,12 @@ const symbolsByFirstLetter = {
   n: "null",
 };
 
+/*
+  TODO:
+  - Parse objects (require key-value pairs within curly braces)
+  - Require comma after every key-value pair (except the last one)
+  - Require comma for every array item
+*/
 self.onmessage = (event: MessageEvent<File>) => {
   const file = event.data;
   const start = performance.now();
@@ -50,9 +56,6 @@ self.onmessage = (event: MessageEvent<File>) => {
         const prevToken = tokens[j - 1];
 
         if (token === " ") continue;
-
-        /* TODO: This character has special traits */
-        if (token === "\\") continue;
 
         if (token === '"') {
           if (prevToken === "\\" && state.isInsideString) continue;
@@ -114,6 +117,9 @@ self.onmessage = (event: MessageEvent<File>) => {
               break;
             case "}":
             case "]": {
+              if (prevToken === ",")
+                throw new Error(`unexpected token ${token}`);
+
               const lastOpenBracket = state.openBrackets.at(-1);
 
               const isObjectEnd = lastOpenBracket === "{" && token === "}";
@@ -144,6 +150,8 @@ self.onmessage = (event: MessageEvent<File>) => {
 
               break;
             case "\n":
+              if (state.isInsideString)
+                throw new Error("multiline strings are not allowed");
               break;
             default:
               if (state.isInsideNumber)
