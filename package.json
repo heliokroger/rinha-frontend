@@ -27,7 +27,6 @@
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vitejs/plugin-react-swc": "^3.3.2",
-    "@vitest/web-worker": "^0.34.6",
     "assemblyscript": "^0.27.14",
     "eslint": "^8.45.0",
     "eslint-plugin-react-hooks": "^4.6.0",

@@ -1,13 +1,5 @@
-export const parseJsonWorker = new Worker(
-  new URL("./parse-json.worker.ts", import.meta.url),
-  {
-    type: "module",
-  }
-);
+import ParseJsonWorker from "./parse-json.worker?worker";
+import ValidateJsonWorker from "./validate-json.worker?worker";
 
-export const validateJsonWorker = new Worker(
-  new URL("./validate-json.worker.ts", import.meta.url),
-  {
-    type: "module",
-  }
-);
+export const parseJsonWorker = new ParseJsonWorker();
+export const validateJsonWorker = new ValidateJsonWorker();
