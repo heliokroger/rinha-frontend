@@ -1,4 +1,4 @@
-import { validateChunk } from "../../build/debug";
+import { validateChunk } from "../../build/release";
 import Logger from "../logger";
 import type { State } from "./validate-json.worker.types";
 
