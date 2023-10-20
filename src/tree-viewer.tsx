@@ -82,7 +82,6 @@ export default function TreeViewer({
                   isRowLoaded={isRowLoaded}
                   loadMoreRows={loadMoreRows}
                   rowCount={100000}
-                  threshold={50}
                 >
                   {({ onRowsRendered, registerChild }) => (
                     <List

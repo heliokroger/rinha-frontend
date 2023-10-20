@@ -9,7 +9,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest",
-    "start": "npx serve ."
+    "start": "npx serve .",
+    "build-wasm": "GOOS=js GOARCH=wasm go build -o ./public/assets/validate-json.wasm"
   },
   "dependencies": {
     "classnames": "^2.3.2",
