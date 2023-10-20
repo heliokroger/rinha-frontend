@@ -10,3 +10,15 @@ declare const FileReaderSync: {
   prototype: FileReaderSync;
   new (): FileReaderSync;
 };
+
+declare class Go {
+  argv: string[];
+  env: { [envKey: string]: string };
+  exit: (code: number) => void;
+  importObject: WebAssembly.Imports;
+  exited: boolean;
+  mem: DataView;
+  run(instance: WebAssembly.Instance): Promise<void>;
+}
+
+declare function validateJson(file: File): boolean;
