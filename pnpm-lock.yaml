@@ -55,6 +55,9 @@ devDependencies:
   vite:
     specifier: ^4.4.5
     version: 4.4.11(@types/node@20.8.5)(sass@1.69.3)
+  vite-plugin-wasm:
+    specifier: ^3.2.2
+    version: 3.2.2(vite@4.4.11)
   vitest:
     specifier: ^0.34.6
     version: 0.34.6(sass@1.69.3)
@@ -1817,6 +1820,14 @@ packages:
       - sugarss
       - supports-color
       - terser
+    dev: true
+
+  /vite-plugin-wasm@3.2.2(vite@4.4.11):
+    resolution: {integrity: sha512-cdbBUNR850AEoMd5nvLmnyeq63CSfoP1ctD/L2vLk/5+wsgAPlAVAzUK5nGKWO/jtehNlrSSHLteN+gFQw7VOA==}
+    peerDependencies:
+      vite: ^2 || ^3 || ^4
+    dependencies:
+      vite: 4.4.11(@types/node@20.8.5)(sass@1.69.3)
     dev: true
 
   /vite@4.4.11(@types/node@20.8.5)(sass@1.69.3):

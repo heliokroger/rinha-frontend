@@ -61,6 +61,8 @@ export default function App() {
             validateJsonWorker.onmessage = null;
           };
 
+          addPerformanceNotification("👉 currently parsing whole file...");
+
           validateJsonWorker.postMessage(file);
 
           setShowTreeViewer(true);

@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "start": "npx serve .",
-    "build-wasm": "GOOS=js GOARCH=wasm go build -o ./public/assets/validate-json.wasm"
+    "build-wasm": "GOOS=js GOARCH=wasm go build -o ./src/main.wasm"
   },
   "dependencies": {
     "classnames": "^2.3.2",
@@ -31,6 +31,7 @@
     "sass": "^1.69.3",
     "typescript": "^5.0.2",
     "vite": "^4.4.5",
+    "vite-plugin-wasm": "^3.2.2",
     "vitest": "^0.34.6"
   }
 }
