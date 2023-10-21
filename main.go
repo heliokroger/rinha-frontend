@@ -7,11 +7,7 @@ import (
 )
 
 func validateJson(this js.Value, args []js.Value) interface{} {
-	file := args[0]
-	fileReader := js.Global().Get("FileReaderSync").New()
-	content := fileReader.Call("readAsText", file).String()
-
-	err := fastjson.Validate(content)
+	err := fastjson.Validate(args[0].String())
 	if err != nil {
 		return false
 	}

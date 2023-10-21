@@ -21,4 +21,4 @@ declare class Go {
   run(instance: WebAssembly.Instance): Promise<void>;
 }
 
-declare function validateJson(file: File): boolean;
+declare function validateJson(file: string): boolean;

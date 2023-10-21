@@ -9,6 +9,7 @@ WebAssembly.instantiateStreaming(fetch(mainWasmUrl), go.importObject).then(
   }
 );
 
-self.onmessage = (event: MessageEvent<File>) => {
-  self.postMessage(validateJson(event.data));
+self.onmessage = async (event: MessageEvent<File>) => {
+  const text = await event.data.text();
+  self.postMessage(validateJson(text));
 };
