@@ -1,11 +1,11 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 
-import { parseJsonWorker, validateJsonWorker } from "./workers";
-import { JsonLine } from "./types";
+import { validateJsonWorker } from "./workers";
 import {
   addPerformanceNotification,
   clearNotifications,
 } from "./notifications";
+import { parseJson } from "./parse-json";
 
 const treeViewer = import("./tree-viewer");
 const TreeViewer = lazy(() => treeViewer);
@@ -15,18 +15,18 @@ const $root = document.getElementById("root")!;
 
 export default function App() {
   const [showTreeViewer, setShowTreeViewer] = useState<null | boolean>(null);
-  const [initialRows, setInitialRows] = useState<null | JsonLine[]>(null);
+  const [parsedFirstChunk, setParsedFirstChunk] = useState(false);
 
   const fileNameRef = useRef("");
   const startRenderingTimeRef = useRef<number | null>(null);
   const firstChunkLoaded = useRef(false);
 
   useEffect(() => {
-    if (showTreeViewer && initialRows) {
+    if (showTreeViewer && parsedFirstChunk) {
       $content.style.display = "none";
       $root.style.display = "block";
     }
-  }, [showTreeViewer, initialRows]);
+  }, [showTreeViewer, parsedFirstChunk]);
 
   useEffect(() => {
     const fileInput = document.getElementById("file-input");
@@ -34,7 +34,7 @@ export default function App() {
     if (fileInput) {
       fileInput.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
-        setInitialRows(null);
+        setParsedFirstChunk(false);
         clearNotifications();
 
         if (target.files && target.files.length) {
@@ -67,35 +67,27 @@ export default function App() {
 
           setShowTreeViewer(true);
 
-          parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
-            setInitialRows(event.data);
-
-            parseJsonWorker.onmessage = null;
-          };
-
-          parseJsonWorker.postMessage({
+          parseJson({
             reset: true,
             file,
             from: 0,
-            to: 1000,
-          });
+            to: 100,
+          }).then(() => setParsedFirstChunk(true));
         }
       };
     }
 
     return () => {
       if (fileInput) fileInput.onchange = null;
-      parseJsonWorker.onmessage = null;
       validateJsonWorker.onmessage = null;
     };
   }, []);
 
-  if (showTreeViewer && initialRows && startRenderingTimeRef.current) {
+  if (showTreeViewer && parsedFirstChunk && startRenderingTimeRef.current) {
     return (
       <Suspense>
         <TreeViewer
           fileName={fileNameRef.current}
-          initialRows={initialRows}
           startRenderingTime={startRenderingTimeRef.current}
         />
       </Suspense>

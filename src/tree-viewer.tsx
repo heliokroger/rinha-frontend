@@ -1,21 +1,19 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect } from "react";
 import type { Index, IndexRange, ListRowRenderer } from "react-virtualized";
 
 import JsonRow from "./components/json-row";
-import { parseJsonWorker } from "./workers";
 
 import AutoSizer from "react-virtualized/dist/commonjs/AutoSizer";
 import InfiniteLoader from "react-virtualized/dist/commonjs/InfiniteLoader";
 import List from "react-virtualized/dist/commonjs/List";
 import WindowScroller from "react-virtualized/dist/commonjs/WindowScroller";
-import type { JsonLine } from "./types";
 
 import styles from "./tree-viewer.module.scss";
 import Logger from "./logger";
 import { addPerformanceNotification } from "./notifications";
+import { parseJson, state } from "./parse-json";
 
 export type TreeViewerProps = {
-  initialRows: JsonLine[];
   fileName: string;
   startRenderingTime: number;
 };
@@ -23,12 +21,9 @@ export type TreeViewerProps = {
 const logger = new Logger("TREE VIEWER");
 
 export default function TreeViewer({
-  initialRows,
   fileName,
   startRenderingTime,
 }: TreeViewerProps) {
-  const rows = useRef<JsonLine[]>([]);
-
   useLayoutEffect(() => {
     const diff = Math.round(performance.now() - startRenderingTime);
 
@@ -37,31 +32,20 @@ export default function TreeViewer({
     addPerformanceNotification("⏰ rendering time: ", diff);
   }, [startRenderingTime]);
 
-  useEffect(() => {
-    rows.current = initialRows;
-  }, [initialRows]);
+  const isRowLoaded = (params: Index) => !!state.rows[params.index];
 
-  const isRowLoaded = (params: Index) => !!rows.current[params.index];
-
-  const loadMoreRows = async (params: IndexRange) => {
-    return new Promise((resolve) => {
-      parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
-        rows.current = [...rows.current, ...event.data];
-        parseJsonWorker.onmessage = null;
-        resolve(null);
-      };
-
-      parseJsonWorker.postMessage({
-        from: params.startIndex,
-        to: params.stopIndex,
-      });
+  const loadMoreRows = (params: IndexRange) => {
+    return parseJson({
+      reset: false,
+      from: params.startIndex,
+      to: params.stopIndex,
     });
   };
 
   const rowRenderer: ListRowRenderer = ({ key, style, index }) => {
     return (
       <div key={key} style={style}>
-        <JsonRow row={rows.current[index]} />
+        <JsonRow row={state.rows[index]} />
       </div>
     );
   };
@@ -87,7 +71,7 @@ export default function TreeViewer({
                       height={height}
                       isScrolling={isScrolling}
                       onScroll={onChildScroll}
-                      rowCount={rows.current.length}
+                      rowCount={state.rows.length}
                       rowHeight={20}
                       rowRenderer={rowRenderer}
                       scrollTop={scrollTop}
