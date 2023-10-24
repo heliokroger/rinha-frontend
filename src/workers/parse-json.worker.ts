@@ -13,7 +13,6 @@ const initialState: State = {
   bytesOffset: 0,
   arrays: [],
   rows: [],
-  chunkInteraction: {},
   file: null,
 };
 
@@ -149,12 +148,11 @@ const onMessage = async (args: Arguments) => {
   if (reset) state = structuredClone(initialState);
   if (file) state.file = file;
 
-  const previousInteraction = state.chunkInteraction[state.currentChunkIndex];
   const isLastInteraction = state.bytesOffset + CHUNK_SIZE > state.file!.size;
-  const isRequestedIndexOutOfBounds = to > previousInteraction?.indexRange![1];
+  const isRequestedIndexOutOfBounds = to > state.rows.length;
 
   /* The request index is still on previous interactions range */
-  if (previousInteraction && !isRequestedIndexOutOfBounds) {
+  if (!isRequestedIndexOutOfBounds) {
     logger.log("Got cached rows for chunk", state.currentChunkIndex);
 
     self.postMessage(state.rows.slice(from, to));
@@ -164,6 +162,7 @@ const onMessage = async (args: Arguments) => {
   const nextChunk = getNextChunk()!;
   const firstChar = nextChunk[0];
 
+  // TODO: Fix for primitives that are separated in chunks
   /* Primitive structure, return a single row and halts */
   if (reset && firstChar !== "{" && firstChar !== "[") {
     self.postMessage([{ content: nextChunk, nestLevel: state.nestLevel }]);
@@ -171,15 +170,6 @@ const onMessage = async (args: Arguments) => {
   }
 
   convertChunkToRows(nextChunk);
-
-  /* Caches the line range present in the chunk */
-  state.chunkInteraction[state.currentChunkIndex] = {
-    ...state.chunkInteraction[state.currentChunkIndex],
-    indexRange: [
-      previousInteraction?.indexRange?.[1] ?? 0,
-      state.rows.length - 1,
-    ],
-  };
 
   state.currentChunkIndex++;
 

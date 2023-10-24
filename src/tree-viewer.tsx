@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Index, IndexRange, ListRowRenderer } from "react-virtualized";
 
 import JsonRow from "./components/json-row";
@@ -27,7 +27,7 @@ export default function TreeViewer({
   fileName,
   startRenderingTime,
 }: TreeViewerProps) {
-  const [rows, setRows] = useState<JsonLine[]>([]);
+  const rows = useRef<JsonLine[]>([]);
 
   useLayoutEffect(() => {
     const diff = Math.round(performance.now() - startRenderingTime);
@@ -38,34 +38,30 @@ export default function TreeViewer({
   }, [startRenderingTime]);
 
   useEffect(() => {
-    parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
-      setRows((prev) => [...prev, ...event.data]);
-    };
-
-    return () => {
-      parseJsonWorker.onmessage = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    setRows(initialRows);
+    rows.current = initialRows;
   }, [initialRows]);
 
-  const isRowLoaded = (params: Index) => !!rows[params.index];
+  const isRowLoaded = (params: Index) => !!rows.current[params.index];
 
   const loadMoreRows = async (params: IndexRange) => {
-    parseJsonWorker.postMessage({
-      from: params.startIndex,
-      to: params.stopIndex,
-    });
+    return new Promise((resolve) => {
+      parseJsonWorker.onmessage = (event: MessageEvent<JsonLine[]>) => {
+        rows.current = [...rows.current, ...event.data];
+        parseJsonWorker.onmessage = null;
+        resolve(null);
+      };
 
-    return null;
+      parseJsonWorker.postMessage({
+        from: params.startIndex,
+        to: params.stopIndex,
+      });
+    });
   };
 
   const rowRenderer: ListRowRenderer = ({ key, style, index }) => {
     return (
       <div key={key} style={style}>
-        <JsonRow row={rows[index]} />
+        <JsonRow row={rows.current[index]} />
       </div>
     );
   };
@@ -91,7 +87,7 @@ export default function TreeViewer({
                       height={height}
                       isScrolling={isScrolling}
                       onScroll={onChildScroll}
-                      rowCount={rows.length}
+                      rowCount={rows.current.length}
                       rowHeight={20}
                       rowRenderer={rowRenderer}
                       scrollTop={scrollTop}

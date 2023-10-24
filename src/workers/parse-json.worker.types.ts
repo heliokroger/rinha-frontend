@@ -8,11 +8,6 @@ export type State = {
   currentChunkIndex: number;
   rows: JsonLine[];
   arrays: { currentIndex: number }[];
-  chunkInteraction: {
-    [key: string]: {
-      indexRange?: [number, number];
-    };
-  };
   file: File | null;
   bytesOffset: number;
 };
