@@ -81,7 +81,7 @@ export default function TreeViewer({
                 <InfiniteLoader
                   isRowLoaded={isRowLoaded}
                   loadMoreRows={loadMoreRows}
-                  rowCount={100000}
+                  rowCount={1e9}
                 >
                   {({ onRowsRendered, registerChild }) => (
                     <List
