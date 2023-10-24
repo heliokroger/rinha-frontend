@@ -11,11 +11,11 @@ import WindowScroller from "react-virtualized/dist/commonjs/WindowScroller";
 import styles from "./tree-viewer.module.scss";
 import Logger from "./logger";
 import { addPerformanceNotification } from "./notifications";
-import { parseJson, state } from "./parse-json";
+import { parseJson, state as parserState } from "./parse-json";
 
 export type TreeViewerProps = {
   fileName: string;
-  startRenderingTime: number;
+  startRenderingTime: number | null;
 };
 
 const logger = new Logger("TREE VIEWER");
@@ -25,14 +25,16 @@ export default function TreeViewer({
   startRenderingTime,
 }: TreeViewerProps) {
   useLayoutEffect(() => {
-    const diff = Math.round(performance.now() - startRenderingTime);
+    if (startRenderingTime) {
+      const diff = Math.round(performance.now() - startRenderingTime);
 
-    logger.log(`Fair rendering time ${diff}ms`);
+      logger.log(`Fair rendering time ${diff}ms`);
 
-    addPerformanceNotification("⏰ rendering time: ", diff);
+      addPerformanceNotification("⏰ rendering time: ", diff);
+    }
   }, [startRenderingTime]);
 
-  const isRowLoaded = (params: Index) => !!state.rows[params.index];
+  const isRowLoaded = (params: Index) => !!parserState.rows[params.index];
 
   const loadMoreRows = (params: IndexRange) => {
     return parseJson({
@@ -45,7 +47,7 @@ export default function TreeViewer({
   const rowRenderer: ListRowRenderer = ({ key, style, index }) => {
     return (
       <div key={key} style={style}>
-        <JsonRow row={state.rows[index]} />
+        <JsonRow row={parserState.rows[index]} />
       </div>
     );
   };
@@ -71,7 +73,7 @@ export default function TreeViewer({
                       height={height}
                       isScrolling={isScrolling}
                       onScroll={onChildScroll}
-                      rowCount={state.rows.length}
+                      rowCount={parserState.rows.length}
                       rowHeight={20}
                       rowRenderer={rowRenderer}
                       scrollTop={scrollTop}

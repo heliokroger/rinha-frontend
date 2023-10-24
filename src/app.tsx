@@ -83,16 +83,12 @@ export default function App() {
     };
   }, []);
 
-  if (showTreeViewer && parsedFirstChunk && startRenderingTimeRef.current) {
-    return (
-      <Suspense>
-        <TreeViewer
-          fileName={fileNameRef.current}
-          startRenderingTime={startRenderingTimeRef.current}
-        />
-      </Suspense>
-    );
-  }
-
-  return null;
+  return (
+    <Suspense>
+      <TreeViewer
+        fileName={fileNameRef.current}
+        startRenderingTime={startRenderingTimeRef.current}
+      />
+    </Suspense>
+  );
 }
