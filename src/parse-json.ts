@@ -1,18 +1,20 @@
 import { JsonLine } from "./types";
 import Logger from "./logger";
 import type { State, Arguments } from "./parse-json.types";
+import db, { Table } from "./db";
+import { formatTime } from "./notifications";
 
 const logger = new Logger("PARSE JSON WORKER");
 
 const initialState: State = {
-  isInsideString: false,
   openingBrackets: [],
-  partialStr: "",
-  nestLevel: 0,
-  currentChunkIndex: 0,
-  bytesOffset: 0,
   arrays: [],
   rows: [],
+  partialStr: "",
+  nestLevel: 0,
+  rowsCount: 0,
+  bytesOffset: 0,
+  isInsideString: false,
   file: null,
 };
 
@@ -35,14 +37,16 @@ const getNextChunk = async () => {
   return null;
 };
 
-const addRow = (content: string, arrayIndex?: number) => {
-  const row: JsonLine = { content, nestLevel: state.nestLevel };
-  if (arrayIndex !== undefined) row.arrayIndex = arrayIndex;
-  state.rows.push(row);
-};
-
-const convertChunkToRows = (chunk: string) => {
+const convertChunkToRows = (chunk: string): JsonLine[] => {
+  const rows: JsonLine[] = [];
   const tokens = chunk.trim().split("");
+
+  const addRow = (content: string, arrayIndex?: number) => {
+    const row: JsonLine = { content, nestLevel: state.nestLevel };
+    if (arrayIndex !== undefined) row.arrayIndex = arrayIndex;
+
+    rows.push(row);
+  };
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -111,24 +115,13 @@ const convertChunkToRows = (chunk: string) => {
     }
 
     if (!state.isInsideString && token === ",") {
-      const lastRowIndex = state.rows.length - 1;
-      const prevRow = state.rows[lastRowIndex];
-
-      /* The comma belongs to a previous closing bracket */
-      if (prevRow.content === "}" || prevRow.content === "]") {
-        state.rows[lastRowIndex] = {
-          ...state.rows[lastRowIndex],
-          content: `${prevRow.content},`,
-        };
-
-        state.partialStr = "";
-        continue;
+      /* There was still content being parsed before the comma */
+      if (prevContent) {
+        addRow(
+          state.partialStr.trim(),
+          lastArray && isInsideArray ? ++lastArray.currentIndex : undefined
+        );
       }
-
-      addRow(
-        state.partialStr.trim(),
-        lastArray && isInsideArray ? ++lastArray.currentIndex : undefined
-      );
 
       state.partialStr = "";
       continue;
@@ -138,23 +131,18 @@ const convertChunkToRows = (chunk: string) => {
     if (!prevContent.endsWith("\\") && token === '"')
       state.isInsideString = !state.isInsideString;
   }
+
+  return rows;
 };
 
-export const parseJson = async (args: Arguments): Promise<JsonLine[]> => {
-  const { from, to, file, reset } = args;
+export const parseJson = async (args: Arguments): Promise<void> => {
+  const start = performance.now();
+  const { to, file, reset } = args;
 
   if (reset) state = structuredClone(initialState);
   if (file) state.file = file;
 
   const isLastInteraction = state.bytesOffset + CHUNK_SIZE > state.file!.size;
-  const isRequestedIndexOutOfBounds = to > state.rows.length;
-
-  /* The request index is still on previous interactions range */
-  if (!isRequestedIndexOutOfBounds) {
-    logger.log("Got cached rows for chunk", state.currentChunkIndex);
-
-    return state.rows.slice(from, to);
-  }
 
   const nextChunk = (await getNextChunk())!;
   const firstChar = nextChunk[0];
@@ -162,17 +150,21 @@ export const parseJson = async (args: Arguments): Promise<JsonLine[]> => {
   // TODO: Fix for primitives that are separated in chunks
   /* Primitive structure, return a single row and halts */
   if (reset && firstChar !== "{" && firstChar !== "[") {
-    return [{ content: nextChunk, nestLevel: state.nestLevel }];
+    // addRow(nextChunk);
+    return;
   }
 
-  convertChunkToRows(nextChunk);
+  const rows = convertChunkToRows(nextChunk);
 
-  state.currentChunkIndex++;
+  await db.table(Table.Chunks).add({ rows });
+
+  state.rows = [...state.rows, ...rows];
+  state.rowsCount += rows.length;
 
   /* Number of lines requested is greater than the chunk size */
-  if (to > state.rows.length - 1 && !isLastInteraction) {
+  if (to > state.rowsCount - 1 && !isLastInteraction) {
     return parseJson({ ...args, reset: false });
   }
 
-  return state.rows.slice(from, to);
+  logger.log(`Parsed chunk in ${formatTime(performance.now() - start)}`);
 };

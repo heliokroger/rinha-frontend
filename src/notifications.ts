@@ -1,9 +1,9 @@
 const footer = document.querySelector("footer")!;
 
-const formatTime = (ms: number) => {
+export const formatTime = (ms: number) => {
   const seconds = ms / 1000;
   if (seconds > 1) return `${seconds.toFixed(2)}s`;
-  return `${ms}ms`;
+  return `${Math.round(ms)}ms`;
 };
 
 export const addPerformanceNotification = (message: string, ms?: number) => {
@@ -13,7 +13,7 @@ export const addPerformanceNotification = (message: string, ms?: number) => {
 
   if (ms) {
     const $span = document.createElement("span");
-    $span.innerText = formatTime(Math.round(ms));
+    $span.innerText = formatTime(ms);
     $span.className = "bold";
 
     $p.appendChild($span);

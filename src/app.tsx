@@ -14,19 +14,17 @@ const $content = document.querySelector(".center-content")! as HTMLElement;
 const $root = document.getElementById("root")!;
 
 export default function App() {
-  const [showTreeViewer, setShowTreeViewer] = useState<null | boolean>(null);
-  const [parsedFirstChunk, setParsedFirstChunk] = useState(false);
+  const [firstChunkLoaded, setFirstChunkLoaded] = useState(false);
+  const [jsonValid, setJsonValid] = useState(true);
 
-  const fileNameRef = useRef("");
   const startRenderingTimeRef = useRef<number | null>(null);
-  const firstChunkLoaded = useRef(false);
 
   useEffect(() => {
-    if (showTreeViewer && parsedFirstChunk) {
+    if (firstChunkLoaded && jsonValid) {
       $content.style.display = "none";
       $root.style.display = "block";
     }
-  }, [showTreeViewer, parsedFirstChunk]);
+  }, [firstChunkLoaded, jsonValid]);
 
   useEffect(() => {
     const fileInput = document.getElementById("file-input");
@@ -34,20 +32,22 @@ export default function App() {
     if (fileInput) {
       fileInput.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
-        setParsedFirstChunk(false);
-        clearNotifications();
 
         if (target.files && target.files.length) {
+          clearNotifications();
+
+          setJsonValid(true);
+
           const [file] = target.files;
 
           startRenderingTimeRef.current = performance.now();
-          fileNameRef.current = file.name;
 
           validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
             if (!event.data) {
-              firstChunkLoaded.current = false;
+              // TODO: Delete the database
+              setFirstChunkLoaded(false);
+              setJsonValid(false);
 
-              setShowTreeViewer(false);
               $content.style.display = "flex";
               $root.style.display = "none";
               document.getElementById("error")!.style.display = "block";
@@ -65,14 +65,14 @@ export default function App() {
 
           validateJsonWorker.postMessage(file);
 
-          setShowTreeViewer(true);
-
           parseJson({
             reset: true,
             file,
             from: 0,
             to: 100,
-          }).then(() => setParsedFirstChunk(true));
+          }).then(() => {
+            setFirstChunkLoaded(true);
+          });
         }
       };
     }
@@ -85,10 +85,7 @@ export default function App() {
 
   return (
     <Suspense>
-      <TreeViewer
-        fileName={fileNameRef.current}
-        startRenderingTime={startRenderingTimeRef.current}
-      />
+      <TreeViewer startRenderingTime={startRenderingTimeRef.current} />
     </Suspense>
   );
 }

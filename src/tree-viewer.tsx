@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useEffect } from "react";
 import type { Index, IndexRange, ListRowRenderer } from "react-virtualized";
 
 import JsonRow from "./components/json-row";
@@ -10,25 +10,23 @@ import WindowScroller from "react-virtualized/dist/commonjs/WindowScroller";
 
 import styles from "./tree-viewer.module.scss";
 import Logger from "./logger";
-import { addPerformanceNotification } from "./notifications";
+import { addPerformanceNotification, formatTime } from "./notifications";
 import { parseJson, state as parserState } from "./parse-json";
 
 export type TreeViewerProps = {
-  fileName: string;
   startRenderingTime: number | null;
 };
 
 const logger = new Logger("TREE VIEWER");
 
-export default function TreeViewer({
-  fileName,
-  startRenderingTime,
-}: TreeViewerProps) {
-  useLayoutEffect(() => {
+// TODO: Get rows from disk
+// TODO: Fix blank space on top of list
+export default function TreeViewer({ startRenderingTime }: TreeViewerProps) {
+  useEffect(() => {
     if (startRenderingTime) {
-      const diff = Math.round(performance.now() - startRenderingTime);
+      const diff = performance.now() - startRenderingTime;
 
-      logger.log(`Fair rendering time ${diff}ms`);
+      logger.log(`Fair rendering time ${formatTime(diff)}`);
 
       addPerformanceNotification("⏰ rendering time: ", diff);
     }
@@ -36,7 +34,7 @@ export default function TreeViewer({
 
   const isRowLoaded = (params: Index) => !!parserState.rows[params.index];
 
-  const loadMoreRows = (params: IndexRange) => {
+  const loadMoreRows = async (params: IndexRange) => {
     return parseJson({
       reset: false,
       from: params.startIndex,
@@ -54,7 +52,7 @@ export default function TreeViewer({
 
   return (
     <section className={styles.content}>
-      <h2 className={styles["file-name"]}>{fileName}</h2>
+      <h2 className={styles["file-name"]}>{parserState.file?.name}</h2>
       <div className={styles["list-container"]}>
         <AutoSizer disableHeight>
           {({ width }) => (
@@ -64,6 +62,7 @@ export default function TreeViewer({
                   isRowLoaded={isRowLoaded}
                   loadMoreRows={loadMoreRows}
                   rowCount={1e9}
+                  threshold={30}
                 >
                   {({ onRowsRendered, registerChild }) => (
                     <List
@@ -73,7 +72,7 @@ export default function TreeViewer({
                       height={height}
                       isScrolling={isScrolling}
                       onScroll={onChildScroll}
-                      rowCount={parserState.rows.length}
+                      rowCount={parserState.rowsCount}
                       rowHeight={20}
                       rowRenderer={rowRenderer}
                       scrollTop={scrollTop}
