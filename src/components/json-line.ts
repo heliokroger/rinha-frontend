@@ -4,21 +4,15 @@ import styles from "./json-line.module.scss";
 const IDENTATION_SPACING = 15;
 const IDENTATION_LINE_OFFSET = 2;
 
-const getValueType = (value: string) => {
+const isValueBracket = (value: string) => {
   const firstChar = value[0];
 
-  if (value.startsWith('"')) return "string";
-  if (value === "null") return "null";
-  if (value === "false" || value === "true") return "boolean";
-  if (
+  return (
     firstChar === "{" ||
     firstChar === "[" ||
     firstChar === "}" ||
     firstChar === "]"
-  )
-    return "bracket";
-
-  return "number";
+  );
 };
 
 export const createListItem = (line: JsonLine) => {
@@ -57,6 +51,7 @@ export const createListItem = (line: JsonLine) => {
   }
 
   const $value = document.createElement("span");
+  $value.className = styles.value;
 
   if (tokens !== null) {
     const [, key, value] = tokens;
@@ -70,10 +65,10 @@ export const createListItem = (line: JsonLine) => {
     $span.appendChild($objectKey);
     $span.appendChild($colon);
 
-    $value.className = `${styles.value} ${styles[getValueType(value)]}`;
+    if (isValueBracket(value)) $value.classList.add(styles.bracket);
     $value.textContent = value;
   } else {
-    $value.className = `${styles.value} ${styles[getValueType(content)]}`;
+    if (isValueBracket(content)) $value.classList.add(styles.bracket);
     $value.textContent = content.endsWith(",") ? content.slice(0, -1) : content;
   }
 

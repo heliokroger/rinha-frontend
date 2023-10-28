@@ -45,7 +45,7 @@ export const getTreeViewer = (file: File) => {
   $ul.appendChild(getListItems(parserState.lines));
 
   const $trigger = document.createElement("div");
-  $trigger.style.height = "10px";
+  $trigger.style.height = "30px";
   $section.appendChild($trigger);
 
   const renderLines = () => {
