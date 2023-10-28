@@ -1,6 +1,11 @@
-import { addPerformanceNotification } from "./components/notifications";
-import { parseJson } from "./parse-json";
-import { getTreeViewer } from "./components/tree-viewer";
+import {
+  addPerformanceNotification,
+  clearNotifications,
+} from "./components/notifications";
+import {
+  getTreeViewer,
+  state as treeViewerState,
+} from "./components/tree-viewer";
 import { validateJsonWorker } from "./workers";
 
 const $fileInput = document.getElementById("file-input")!;
@@ -11,32 +16,24 @@ const $content = document.querySelector(".center-content")! as HTMLDivElement;
 
 $fileInput.onchange = (event: Event) => {
   const start = performance.now();
+  clearNotifications();
   const target = event.target as HTMLInputElement;
 
   if (target.files && target.files.length) {
     const [file] = target.files;
 
-    parseJson({
-      reset: true,
-      file,
-      numberOfRows: 50,
-    }).then(() => {
-      $root.style.display = "block";
-      $content.style.display = "none";
+    $content.style.display = "none";
 
-      const $treeViewer = getTreeViewer(file);
-      $root.appendChild($treeViewer);
-
-      addPerformanceNotification(
-        `⏰ rendered first chunk in: `,
-        performance.now() - start
-      );
-    });
+    const $treeViewer = getTreeViewer(file);
+    $root.appendChild($treeViewer);
 
     validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
       if (!event.data) {
         $content.style.display = "flex";
-        $root.style.display = "none";
+        $root.innerHTML = "";
+
+        if (treeViewerState.observer) treeViewerState.observer.disconnect();
+
         $error.style.display = "block";
       }
 

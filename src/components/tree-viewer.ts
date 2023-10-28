@@ -2,6 +2,7 @@ import { createListItem } from "./json-line";
 import { parseJson, state as parserState } from "../parse-json";
 import styles from "./tree-viewer.module.scss";
 import type { JsonLine } from "../types";
+import { addPerformanceNotification } from "./notifications";
 
 const getListItems = (lines: JsonLine[]) => {
   const fragment = document.createDocumentFragment();
@@ -14,15 +15,19 @@ const getListItems = (lines: JsonLine[]) => {
   return fragment;
 };
 
+const LINES_PER_BATCH = 70;
+
 type State = {
   observer: IntersectionObserver | null;
   from: number;
   to: number;
 };
 
-const state: State = { observer: null, from: 0, to: 100 };
+export const state: State = { observer: null, from: 0, to: 100 };
 
 export const getTreeViewer = (file: File) => {
+  const start = performance.now();
+
   const $section = document.createElement("section");
   $section.className = styles.content;
 
@@ -45,8 +50,8 @@ export const getTreeViewer = (file: File) => {
 
   state.observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) {
-      state.from += 50;
-      state.to += 50;
+      state.from += LINES_PER_BATCH;
+      state.to += LINES_PER_BATCH;
 
       const hasLoadedIndex = parserState.lines[state.to];
 
@@ -67,6 +72,19 @@ export const getTreeViewer = (file: File) => {
   });
 
   state.observer.observe($trigger);
+
+  parseJson({
+    reset: true,
+    file,
+    numberOfRows: LINES_PER_BATCH,
+  }).then(() => {
+    $ul.appendChild(getListItems(parserState.lines));
+
+    addPerformanceNotification(
+      `⏰ rendered first chunk in: `,
+      performance.now() - start
+    );
+  });
 
   return $section;
 };

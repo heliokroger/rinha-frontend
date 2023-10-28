@@ -11,7 +11,6 @@ const initialState: State = {
   lines: [],
   partialStr: "",
   nestLevel: 0,
-  lineCount: 0,
   bytesOffset: 0,
   isInsideString: false,
   file: null,
@@ -135,33 +134,36 @@ const convertChunkToLines = (chunk: string): JsonLine[] => {
 };
 
 export const parseJson = async (args: Arguments): Promise<void> => {
-  const start = performance.now();
   const { numberOfRows, file, reset } = args;
 
   if (reset) state = structuredClone(initialState);
   if (file) state.file = file;
 
-  let isLastInteraction = false;
+  // TODO: Fix for primitives that are separated in chunks
+  /* Primitive structure, return a single line and halts */
+  // if (reset && firstChar !== "{" && firstChar !== "[") {
+  // addRow(nextChunk);
+  // return;
+  // }
+
+  let isLastInteraction = state.bytesOffset > state.file!.size;
+
+  if (isLastInteraction) {
+    logger.log("There are no more chunks");
+    return;
+  }
 
   /* Loop until rowsCount matches the requested number of lines */
-  while (numberOfRows > state.lineCount - 1 && !isLastInteraction) {
+  while (numberOfRows > state.lines.length - 1 && !isLastInteraction) {
+    const start = performance.now();
     isLastInteraction = state.bytesOffset + CHUNK_SIZE > state.file!.size;
 
     const nextChunk = (await getNextChunk())!;
-    const firstChar = nextChunk[0];
-
-    // TODO: Fix for primitives that are separated in chunks
-    /* Primitive structure, return a single line and halts */
-    if (reset && firstChar !== "{" && firstChar !== "[") {
-      // addRow(nextChunk);
-      return;
-    }
 
     const lines = convertChunkToLines(nextChunk);
 
     state.lines = [...state.lines, ...lines];
-    state.lineCount += lines.length;
-  }
 
-  logger.log(`Parsed chunk in ${formatTime(performance.now() - start)}`);
+    logger.log(`Parsed chunk in ${formatTime(performance.now() - start)}`);
+  }
 };

@@ -9,7 +9,6 @@ export type State = {
   arrays: { currentIndex: number }[];
   file: File | null;
   bytesOffset: number;
-  lineCount: number;
 };
 
 export type Arguments = {
