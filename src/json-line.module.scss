@@ -1,0 +1,32 @@
+.object-key {
+  color: #4e9590;
+}
+
+.value {
+  color: #000000;
+
+  &.bracket {
+    color: #f2cab8;
+  }
+}
+
+.line {
+  height: 20px;
+  position: relative;
+}
+
+.line-content {
+  white-space: nowrap;
+  font-size: 16px;
+}
+
+.identation-line {
+  background-color: #bfbfbf;
+  position: absolute;
+  width: 1px;
+  height: 100%;
+}
+
+.array-index {
+  color: #bfbfbf;
+}
