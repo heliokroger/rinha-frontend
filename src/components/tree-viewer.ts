@@ -48,25 +48,26 @@ export const getTreeViewer = (file: File) => {
   $trigger.style.height = "10px";
   $section.appendChild($trigger);
 
+  const renderLines = () => {
+    const slice = parserState.lines.slice(state.from, state.to);
+    $ul.appendChild(getListItems(slice));
+  };
+
   state.observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) {
-      state.from += LINES_PER_BATCH;
-      state.to += LINES_PER_BATCH;
-
       const hasLoadedIndex = parserState.lines[state.to];
 
       if (hasLoadedIndex) {
-        const slice = parserState.lines.slice(state.from, state.to);
-        $ul.appendChild(getListItems(slice));
+        renderLines();
       } else {
+        state.from += LINES_PER_BATCH;
+        state.to += LINES_PER_BATCH;
+
         parseJson({
           reset: false,
           file,
           numberOfRows: state.to,
-        }).then(() => {
-          const slice = parserState.lines.slice(state.from, state.to);
-          $ul.appendChild(getListItems(slice));
-        });
+        }).then(renderLines);
       }
     }
   });
@@ -78,7 +79,7 @@ export const getTreeViewer = (file: File) => {
     file,
     numberOfRows: LINES_PER_BATCH,
   }).then(() => {
-    $ul.appendChild(getListItems(parserState.lines));
+    renderLines();
 
     addPerformanceNotification(
       `⏰ rendered first chunk in: `,
