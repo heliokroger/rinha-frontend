@@ -1,7 +1,7 @@
 import { JsonLine } from "./types";
 import Logger from "./logger";
 import type { State, Arguments } from "./parse-json.types";
-import { formatTime } from "./notifications";
+import { formatTime } from "./components/notifications";
 
 const logger = new Logger("PARSE JSON WORKER");
 

@@ -1,4 +1,4 @@
-import type { JsonLine } from "./types";
+import type { JsonLine } from "../types";
 import styles from "./json-line.module.scss";
 
 const IDENTATION_SPACING = 15;

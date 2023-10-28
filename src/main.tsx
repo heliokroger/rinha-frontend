@@ -1,6 +1,6 @@
-import { addPerformanceNotification } from "./notifications";
+import { addPerformanceNotification } from "./components/notifications";
 import { parseJson } from "./parse-json";
-import { getTreeViewer } from "./tree-viewer";
+import { getTreeViewer } from "./components/tree-viewer";
 import { validateJsonWorker } from "./workers";
 
 const $fileInput = document.getElementById("file-input")!;

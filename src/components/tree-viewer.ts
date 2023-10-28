@@ -1,7 +1,7 @@
 import { createListItem } from "./json-line";
-import { parseJson, state as parserState } from "./parse-json";
+import { parseJson, state as parserState } from "../parse-json";
 import styles from "./tree-viewer.module.scss";
-import type { JsonLine } from "./types";
+import type { JsonLine } from "../types";
 
 const getListItems = (lines: JsonLine[]) => {
   const fragment = document.createDocumentFragment();
