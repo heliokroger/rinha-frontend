@@ -40,6 +40,7 @@ export const createListItem = (line: JsonLine) => {
 
   const $span = document.createElement("span");
   $span.className = styles["line-content"];
+  $span.tabIndex = 0;
   $span.style.marginLeft = `${nestLevel * IDENTATION_SPACING}px`;
 
   if (arrayIndex !== undefined) {

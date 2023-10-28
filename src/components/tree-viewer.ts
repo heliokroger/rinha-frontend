@@ -39,6 +39,7 @@ export const getTreeViewer = (file: File) => {
 
   const $ul = document.createElement("ul");
   $ul.className = styles["list-container"];
+  $ul.tabIndex = 0;
 
   $section.appendChild($ul);
 

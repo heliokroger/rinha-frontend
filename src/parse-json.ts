@@ -40,7 +40,10 @@ const convertChunkToLines = (chunk: string): JsonLine[] => {
   const tokens = chunk.trim().split("");
 
   const addLine = (content: string, arrayIndex?: number) => {
-    const line: JsonLine = { content, nestLevel: state.nestLevel };
+    const line: JsonLine = {
+      content,
+      nestLevel: state.nestLevel,
+    };
     if (arrayIndex !== undefined) line.arrayIndex = arrayIndex;
 
     lines.push(line);
