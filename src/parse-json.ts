@@ -1,7 +1,6 @@
 import { JsonLine } from "./types";
 import Logger from "./logger";
 import type { State, Arguments } from "./parse-json.types";
-import db, { Table } from "./db";
 import { formatTime } from "./notifications";
 
 const logger = new Logger("PARSE JSON WORKER");
@@ -9,10 +8,10 @@ const logger = new Logger("PARSE JSON WORKER");
 const initialState: State = {
   openingBrackets: [],
   arrays: [],
-  rows: [],
+  lines: [],
   partialStr: "",
   nestLevel: 0,
-  rowsCount: 0,
+  lineCount: 0,
   bytesOffset: 0,
   isInsideString: false,
   file: null,
@@ -37,15 +36,15 @@ const getNextChunk = async () => {
   return null;
 };
 
-const convertChunkToRows = (chunk: string): JsonLine[] => {
-  const rows: JsonLine[] = [];
+const convertChunkToLines = (chunk: string): JsonLine[] => {
+  const lines: JsonLine[] = [];
   const tokens = chunk.trim().split("");
 
-  const addRow = (content: string, arrayIndex?: number) => {
-    const row: JsonLine = { content, nestLevel: state.nestLevel };
-    if (arrayIndex !== undefined) row.arrayIndex = arrayIndex;
+  const addLine = (content: string, arrayIndex?: number) => {
+    const line: JsonLine = { content, nestLevel: state.nestLevel };
+    if (arrayIndex !== undefined) line.arrayIndex = arrayIndex;
 
-    rows.push(row);
+    lines.push(line);
   };
 
   for (let i = 0; i < tokens.length; i++) {
@@ -73,14 +72,14 @@ const convertChunkToRows = (chunk: string): JsonLine[] => {
         if (token === "[") {
           const isKeyValuePair = prevContent.endsWith(":");
 
-          addRow(
+          addLine(
             state.partialStr.trim(),
             lastArray && !isKeyValuePair ? ++lastArray.currentIndex : undefined
           );
 
           state.arrays.push({ currentIndex: -1 });
         } else {
-          addRow(
+          addLine(
             state.partialStr.trim(),
             lastArray && isInsideArray ? ++lastArray.currentIndex : undefined
           );
@@ -100,7 +99,7 @@ const convertChunkToRows = (chunk: string): JsonLine[] => {
 
       /* Block end, decreases nest level */
       if (prevContent) {
-        addRow(
+        addLine(
           prevContent,
           lastArray && isInsideArray ? ++lastArray.currentIndex : undefined
         );
@@ -108,7 +107,7 @@ const convertChunkToRows = (chunk: string): JsonLine[] => {
 
       state.nestLevel--;
 
-      addRow(token);
+      addLine(token);
 
       state.partialStr = "";
       continue;
@@ -117,7 +116,7 @@ const convertChunkToRows = (chunk: string): JsonLine[] => {
     if (!state.isInsideString && token === ",") {
       /* There was still content being parsed before the comma */
       if (prevContent) {
-        addRow(
+        addLine(
           state.partialStr.trim(),
           lastArray && isInsideArray ? ++lastArray.currentIndex : undefined
         );
@@ -132,38 +131,36 @@ const convertChunkToRows = (chunk: string): JsonLine[] => {
       state.isInsideString = !state.isInsideString;
   }
 
-  return rows;
+  return lines;
 };
 
 export const parseJson = async (args: Arguments): Promise<void> => {
   const start = performance.now();
-  const { to, file, reset } = args;
+  const { numberOfRows, file, reset } = args;
 
   if (reset) state = structuredClone(initialState);
   if (file) state.file = file;
 
-  const isLastInteraction = state.bytesOffset + CHUNK_SIZE > state.file!.size;
+  let isLastInteraction = false;
 
-  const nextChunk = (await getNextChunk())!;
-  const firstChar = nextChunk[0];
+  /* Loop until rowsCount matches the requested number of lines */
+  while (numberOfRows > state.lineCount - 1 && !isLastInteraction) {
+    isLastInteraction = state.bytesOffset + CHUNK_SIZE > state.file!.size;
 
-  // TODO: Fix for primitives that are separated in chunks
-  /* Primitive structure, return a single row and halts */
-  if (reset && firstChar !== "{" && firstChar !== "[") {
-    // addRow(nextChunk);
-    return;
-  }
+    const nextChunk = (await getNextChunk())!;
+    const firstChar = nextChunk[0];
 
-  const rows = convertChunkToRows(nextChunk);
+    // TODO: Fix for primitives that are separated in chunks
+    /* Primitive structure, return a single line and halts */
+    if (reset && firstChar !== "{" && firstChar !== "[") {
+      // addRow(nextChunk);
+      return;
+    }
 
-  await db.table(Table.Chunks).add({ rows });
+    const lines = convertChunkToLines(nextChunk);
 
-  state.rows = [...state.rows, ...rows];
-  state.rowsCount += rows.length;
-
-  /* Number of lines requested is greater than the chunk size */
-  if (to > state.rowsCount - 1 && !isLastInteraction) {
-    return parseJson({ ...args, reset: false });
+    state.lines = [...state.lines, ...lines];
+    state.lineCount += lines.length;
   }
 
   logger.log(`Parsed chunk in ${formatTime(performance.now() - start)}`);
