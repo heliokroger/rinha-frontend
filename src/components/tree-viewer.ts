@@ -32,7 +32,7 @@ export const createTreeViewer = async (file: File) => {
   $fileName.className = styles["file-name"];
   $fileName.textContent = file.name;
 
-  // $section.appendChild($fileName);
+  $section.appendChild($fileName);
 
   const { $virtualList, $inner, updateRowCount, onPaint } = createVirtualList({
     itemHeight: ITEM_HEIGHT,
