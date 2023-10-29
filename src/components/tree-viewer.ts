@@ -13,7 +13,7 @@ type State = {
 
 export const state: State = { numberOfRows: LINES_PER_BATCH };
 
-const memo = new Map<JsonLine, string>();
+const lineMemo = new Map<JsonLine, string>();
 
 const getListItems = (itemsPerPage: number) => {
   const fragment = document.createDocumentFragment();
@@ -24,7 +24,7 @@ const getListItems = (itemsPerPage: number) => {
 
     const $li = createListItem(line);
 
-    memo.set(line, $li.innerHTML);
+    lineMemo.set(line, $li.innerHTML);
 
     fragment.appendChild($li);
   }
@@ -47,11 +47,13 @@ export const createTreeViewer = async (file: File) => {
     renderRow: (index) => {
       const line = parserState.lines[index];
 
-      if (memo.has(line)) return memo.get(line)!;
+      if (lineMemo.has(line)) {
+        return lineMemo.get(line)!;
+      }
 
       const $li = createListItem(line);
 
-      memo.set(line, $li.innerHTML);
+      lineMemo.set(line, $li.innerHTML);
 
       return $li.innerHTML;
     },

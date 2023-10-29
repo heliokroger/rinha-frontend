@@ -20,6 +20,7 @@ export const createVirtualList = ({
   const $virtualList = document.createElement("div");
   $virtualList.style.height = "100%";
   $virtualList.style.overflow = "auto";
+  $virtualList.style.overscrollBehavior = "none";
 
   const $outer = document.createElement("div");
   $outer.tabIndex = 0;
