@@ -2,6 +2,7 @@ import { createListItem } from "./json-line";
 import { parseJson, state as parserState } from "../parse-json";
 import styles from "./tree-viewer.module.scss";
 import { createVirtualList } from "./virtual-list";
+import type { JsonLine } from "../types";
 
 const LINES_PER_BATCH = 100;
 const ITEM_HEIGHT = 20;
@@ -12,7 +13,7 @@ type State = {
 
 export const state: State = { numberOfRows: LINES_PER_BATCH };
 
-const memo = new Map<number, string>();
+const memo = new Map<JsonLine, string>();
 
 const getListItems = (itemsPerPage: number) => {
   const fragment = document.createDocumentFragment();
@@ -23,7 +24,7 @@ const getListItems = (itemsPerPage: number) => {
 
     const $li = createListItem(line);
 
-    memo.set(i, $li.innerHTML);
+    memo.set(line, $li.innerHTML);
 
     fragment.appendChild($li);
   }
@@ -44,12 +45,13 @@ export const createTreeViewer = async (file: File) => {
   const { $virtualList, $inner, updateRowCount, onPaint } = createVirtualList({
     itemHeight: ITEM_HEIGHT,
     renderRow: (index) => {
-      if (memo.has(index)) return memo.get(index)!;
-
       const line = parserState.lines[index];
+
+      if (memo.has(line)) return memo.get(line)!;
+
       const $li = createListItem(line);
 
-      memo.set(index, $li.innerHTML);
+      memo.set(line, $li.innerHTML);
 
       return $li.innerHTML;
     },
