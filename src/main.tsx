@@ -49,8 +49,6 @@ $fileInput.onchange = (event: Event) => {
         $fileSelectionContainer.style.display = "flex";
         $root.innerHTML = "";
 
-        if (treeViewerState.observer) treeViewerState.observer.disconnect();
-
         $error.style.display = "block";
       }
 
