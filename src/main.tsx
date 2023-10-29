@@ -1,8 +1,5 @@
 import { createPerformanceNotification } from "./components/notifications";
-import {
-  createTreeViewer,
-  state as treeViewerState,
-} from "./components/tree-viewer";
+import { createTreeViewer } from "./components/tree-viewer";
 import { validateJsonWorker } from "./workers";
 
 const $fileInput = document.getElementById("file-input")!;
