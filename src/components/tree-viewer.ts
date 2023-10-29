@@ -12,13 +12,20 @@ type State = {
 
 export const state: State = { numberOfRows: LINES_PER_BATCH };
 
+const memo = new Map<number, string>();
+
 const getListItems = (itemsPerPage: number) => {
   const fragment = document.createDocumentFragment();
 
   for (let i = 0; i < itemsPerPage; i++) {
     const line = parserState.lines[i];
     if (!line) break;
-    fragment.appendChild(createListItem(line));
+
+    const $li = createListItem(line);
+
+    memo.set(i, $li.innerHTML);
+
+    fragment.appendChild($li);
   }
 
   return fragment;
@@ -37,8 +44,14 @@ export const createTreeViewer = async (file: File) => {
   const { $virtualList, $inner, updateRowCount, onPaint } = createVirtualList({
     itemHeight: ITEM_HEIGHT,
     renderRow: (index) => {
+      if (memo.has(index)) return memo.get(index)!;
+
       const line = parserState.lines[index];
-      return createListItem(line);
+      const $li = createListItem(line);
+
+      memo.set(index, $li.innerHTML);
+
+      return $li.innerHTML;
     },
     renderFirstBatch: (itemsPerPage) => {
       $inner.appendChild(getListItems(itemsPerPage));

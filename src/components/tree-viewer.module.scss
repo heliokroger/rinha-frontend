@@ -1,12 +1,12 @@
 .file-name {
   font-size: 32px;
+  margin-bottom: 10px;
 }
 
 .list-container {
   margin: 0;
   padding: 0;
   list-style: none;
-  overflow-x: auto;
 }
 
 .content {
@@ -16,4 +16,5 @@
   margin-right: auto;
   display: flex;
   flex-direction: column;
+  padding: 24px 46px;
 }
