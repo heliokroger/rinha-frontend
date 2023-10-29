@@ -1,9 +1,6 @@
+import { createPerformanceNotification } from "./components/notifications";
 import {
-  addPerformanceNotification,
-  clearNotifications,
-} from "./components/notifications";
-import {
-  getTreeViewer,
+  createTreeViewer,
   state as treeViewerState,
 } from "./components/tree-viewer";
 import { validateJsonWorker } from "./workers";
@@ -12,7 +9,19 @@ const $fileInput = document.getElementById("file-input")!;
 const $root = document.getElementById("root")!;
 const $error = document.getElementById("error")!;
 
-const $content = document.querySelector(".center-content")! as HTMLDivElement;
+const $fileSelectionContainer = document.querySelector(
+  ".file-selection-container"
+) as HTMLDivElement;
+const $notificationContainer = document.querySelector(
+  ".notification-container"
+) as HTMLDivElement;
+
+const clearNotifications = () => {
+  const [, ...notifications] = Array.from($notificationContainer.children);
+  for (const notification of notifications) {
+    notification.remove();
+  }
+};
 
 $fileInput.onchange = (event: Event) => {
   const start = performance.now();
@@ -22,14 +31,22 @@ $fileInput.onchange = (event: Event) => {
   if (target.files && target.files.length) {
     const [file] = target.files;
 
-    $content.style.display = "none";
+    $fileSelectionContainer.style.display = "none";
 
-    const $treeViewer = getTreeViewer(file);
-    $root.appendChild($treeViewer);
+    createTreeViewer(file).then(($treeViewer) => {
+      $root.appendChild($treeViewer);
+
+      $notificationContainer.appendChild(
+        createPerformanceNotification(
+          `⏰ rendered first chunk in: `,
+          performance.now() - start
+        )
+      );
+    });
 
     validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
       if (!event.data) {
-        $content.style.display = "flex";
+        $fileSelectionContainer.style.display = "flex";
         $root.innerHTML = "";
 
         if (treeViewerState.observer) treeViewerState.observer.disconnect();
@@ -37,9 +54,11 @@ $fileInput.onchange = (event: Event) => {
         $error.style.display = "block";
       }
 
-      addPerformanceNotification(
-        `⏰ fully parsed json in: `,
-        performance.now() - start
+      $notificationContainer.appendChild(
+        createPerformanceNotification(
+          `⏰ fully parsed json in: `,
+          performance.now() - start
+        )
       );
 
       validateJsonWorker.onmessage = null;

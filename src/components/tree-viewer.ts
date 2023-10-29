@@ -1,33 +1,30 @@
 import { createListItem } from "./json-line";
 import { parseJson, state as parserState } from "../parse-json";
 import styles from "./tree-viewer.module.scss";
-import type { JsonLine } from "../types";
-import { addPerformanceNotification } from "./notifications";
+import { createVirtualList } from "./virtual-list";
 
-const getListItems = (lines: JsonLine[]) => {
+const LINES_PER_BATCH = 100;
+const ITEM_HEIGHT = 20;
+
+type State = {
+  numberOfRows: number;
+};
+
+export const state: State = { numberOfRows: LINES_PER_BATCH };
+
+const getListItems = (itemsPerPage: number) => {
   const fragment = document.createDocumentFragment();
 
-  for (const line of lines) {
-    const $listItem = createListItem(line);
-    fragment.appendChild($listItem);
+  for (let i = 0; i < itemsPerPage; i++) {
+    const line = parserState.lines[i];
+    if (!line) break;
+    fragment.appendChild(createListItem(line));
   }
 
   return fragment;
 };
 
-const LINES_PER_BATCH = 70;
-
-type State = {
-  observer: IntersectionObserver | null;
-  from: number;
-  to: number;
-};
-
-export const state: State = { observer: null, from: 0, to: 100 };
-
-export const getTreeViewer = (file: File) => {
-  const start = performance.now();
-
+export const createTreeViewer = async (file: File) => {
   const $section = document.createElement("section");
   $section.className = styles.content;
 
@@ -35,58 +32,40 @@ export const getTreeViewer = (file: File) => {
   $fileName.className = styles["file-name"];
   $fileName.textContent = file.name;
 
-  $section.appendChild($fileName);
+  // $section.appendChild($fileName);
 
-  const $ul = document.createElement("ul");
-  $ul.className = styles["list-container"];
-  $ul.tabIndex = 0;
+  const { $virtualList, $inner, updateRowCount, onPaint } = createVirtualList({
+    itemHeight: ITEM_HEIGHT,
+    renderRow: (index) => {
+      const line = parserState.lines[index];
+      return createListItem(line);
+    },
+    renderFirstBatch: (itemsPerPage) => {
+      $inner.appendChild(getListItems(itemsPerPage));
+    },
+    onRequestRows: () => {
+      state.numberOfRows += LINES_PER_BATCH;
 
-  $section.appendChild($ul);
-
-  $ul.appendChild(getListItems(parserState.lines));
-
-  const $trigger = document.createElement("div");
-  $trigger.style.height = "30px";
-  $section.appendChild($trigger);
-
-  const renderLines = () => {
-    const slice = parserState.lines.slice(state.from, state.to);
-    $ul.appendChild(getListItems(slice));
-  };
-
-  state.observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) {
-      const hasLoadedIndex = parserState.lines[state.to];
-
-      if (hasLoadedIndex) {
-        renderLines();
-      } else {
-        state.from += LINES_PER_BATCH;
-        state.to += LINES_PER_BATCH;
-
-        parseJson({
-          reset: false,
-          file,
-          numberOfRows: state.to,
-        }).then(renderLines);
-      }
-    }
+      parseJson({
+        reset: false,
+        numberOfRows: state.numberOfRows,
+      }).then(() => {
+        updateRowCount(parserState.lines.length);
+      });
+    },
   });
 
-  state.observer.observe($trigger);
+  $section.appendChild($virtualList);
 
-  parseJson({
+  return parseJson({
     reset: true,
     file,
     numberOfRows: LINES_PER_BATCH,
   }).then(() => {
-    renderLines();
+    updateRowCount(parserState.lines.length);
 
-    addPerformanceNotification(
-      `⏰ rendered first chunk in: `,
-      performance.now() - start
-    );
+    requestAnimationFrame(() => onPaint());
+
+    return $section;
   });
-
-  return $section;
 };
