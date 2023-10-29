@@ -9,30 +9,32 @@ const ITEM_HEIGHT = 20;
 
 type State = {
   numberOfRows: number;
-};
-
-export const state: State = { numberOfRows: LINES_PER_BATCH };
-
-const lineMemo = new Map<JsonLine, string>();
-
-const getListItems = (itemsPerPage: number) => {
-  const fragment = document.createDocumentFragment();
-
-  for (let i = 0; i < itemsPerPage; i++) {
-    const line = parserState.lines[i];
-    if (!line) break;
-
-    const $li = createListItem(line);
-
-    lineMemo.set(line, $li.innerHTML);
-
-    fragment.appendChild($li);
-  }
-
-  return fragment;
+  lineMemo: Map<JsonLine, string>;
 };
 
 export const createTreeViewer = async (file: File) => {
+  const state: State = {
+    numberOfRows: LINES_PER_BATCH,
+    lineMemo: new Map<JsonLine, string>(),
+  };
+
+  const getListItems = (itemsPerPage: number) => {
+    const fragment = document.createDocumentFragment();
+
+    for (let i = 0; i < itemsPerPage; i++) {
+      const line = parserState.lines[i];
+      if (!line) break;
+
+      const $li = createListItem(line);
+
+      state.lineMemo.set(line, $li.innerHTML);
+
+      fragment.appendChild($li);
+    }
+
+    return fragment;
+  };
+
   const $section = document.createElement("section");
   $section.className = styles.content;
 
@@ -47,13 +49,13 @@ export const createTreeViewer = async (file: File) => {
     renderRow: (index) => {
       const line = parserState.lines[index];
 
-      if (lineMemo.has(line)) {
-        return lineMemo.get(line)!;
+      if (state.lineMemo.has(line)) {
+        return state.lineMemo.get(line)!;
       }
 
       const $li = createListItem(line);
 
-      lineMemo.set(line, $li.innerHTML);
+      state.lineMemo.set(line, $li.innerHTML);
 
       return $li.innerHTML;
     },

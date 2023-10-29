@@ -18,6 +18,7 @@ export const createVirtualList = ({
   const state = { itemsPerPage: 0 };
 
   const $virtualList = document.createElement("div");
+  $virtualList.tabIndex = 0;
   $virtualList.style.height = "100%";
   $virtualList.style.overflow = "auto";
   $virtualList.style.overscrollBehavior = "none";
