@@ -5,14 +5,20 @@ export type State = {
   partialStr: string;
   openingBrackets: ("{" | "[")[];
   nestLevel: number;
+  minNumOfRows: number;
   lines: JsonLine[];
   arrays: { currentIndex: number }[];
   file: File | null;
   bytesOffset: number;
+  hasFinished: boolean;
 };
 
-export type Arguments = {
-  numberOfRows: number;
-  reset: boolean;
-  file?: File;
-};
+export type Arguments =
+  | {
+      reset: false;
+    }
+  | {
+      minNumOfRows: number;
+      reset: true;
+      file: File;
+    };

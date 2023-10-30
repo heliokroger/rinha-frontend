@@ -3,7 +3,7 @@ import Logger from "./logger";
 import type { State, Arguments } from "./parse-json.types";
 import { formatTime } from "./components/notifications";
 
-const logger = new Logger("PARSE JSON WORKER");
+const logger = new Logger("PARSE JSON");
 
 const initialState: State = {
   openingBrackets: [],
@@ -12,13 +12,19 @@ const initialState: State = {
   partialStr: "",
   nestLevel: 0,
   bytesOffset: 0,
+  minNumOfRows: 0,
   isInsideString: false,
+  hasFinished: false,
   file: null,
 };
 
 export let state = structuredClone(initialState);
 
 export const CHUNK_SIZE = 1_000; // 1kb
+
+export const clearState = () => {
+  state = structuredClone(initialState);
+};
 
 const getNextChunk = async () => {
   if (state.file) {
@@ -136,37 +142,52 @@ const convertChunkToLines = (chunk: string): JsonLine[] => {
   return lines;
 };
 
-export const parseJson = async (args: Arguments): Promise<void> => {
-  const { numberOfRows, file, reset } = args;
+const getChunkAndParse = async () => {
+  const start = performance.now();
+  state.hasFinished = state.bytesOffset + CHUNK_SIZE > state.file!.size;
 
-  if (reset) state = structuredClone(initialState);
-  if (file) state.file = file;
+  const nextChunk = (await getNextChunk())!;
 
-  // TODO: Fix for primitives that are separated in chunks
   /* Primitive structure, return a single line and halts */
-  // if (reset && firstChar !== "{" && firstChar !== "[") {
-  // addRow(nextChunk);
-  // return;
-  // }
+  if (
+    state.lines.length === 0 &&
+    nextChunk[0] !== "{" &&
+    nextChunk[0] !== "["
+  ) {
+    const text = await state.file?.text();
+    state.hasFinished = true;
 
-  let isLastInteraction = state.bytesOffset > state.file!.size;
+    state.lines = [{ content: text!, nestLevel: 0 }];
+  } else {
+    const lines = convertChunkToLines(nextChunk);
 
-  if (isLastInteraction) {
+    state.lines = [...state.lines, ...lines];
+  }
+
+  logger.log(`Parsed chunk in ${formatTime(performance.now() - start)}`);
+};
+
+export const parseJson = async (args: Arguments): Promise<void> => {
+  if (args.reset) {
+    clearState();
+
+    state.file = args.file;
+    state.minNumOfRows = args.minNumOfRows;
+  }
+
+  if (state.hasFinished) {
     logger.log("There are no more chunks");
     return;
   }
 
-  /* Loop until rowsCount matches the requested number of lines */
-  while (numberOfRows > state.lines.length - 1 && !isLastInteraction) {
-    const start = performance.now();
-    isLastInteraction = state.bytesOffset + CHUNK_SIZE > state.file!.size;
+  if (state.lines.length === 0) {
+    /* Loop until minimum number of rows is met */
+    while (state.lines.length < state.minNumOfRows && !state.hasFinished) {
+      await getChunkAndParse();
+    }
 
-    const nextChunk = (await getNextChunk())!;
-
-    const lines = convertChunkToLines(nextChunk);
-
-    state.lines = [...state.lines, ...lines];
-
-    logger.log(`Parsed chunk in ${formatTime(performance.now() - start)}`);
+    return;
   }
+
+  await getChunkAndParse();
 };

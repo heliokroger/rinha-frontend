@@ -1,13 +1,16 @@
+import Logger from "../logger";
 import styles from "./tree-viewer.module.scss";
 
-const THRESHOLD = 30;
+const THRESHOLD = 50;
 
 type Arguments = {
   itemHeight: number;
   renderFirstBatch: (itemsPerPage: number) => void;
   renderRow: (index: number) => string;
-  onRequestRows: () => void;
+  onRequestRows: () => Promise<void> | void;
 };
+
+const logger = new Logger("VIRTUAL LIST");
 
 export const createVirtualList = ({
   itemHeight,
@@ -31,14 +34,15 @@ export const createVirtualList = ({
   $inner.className = styles["list-container"];
   $outer.appendChild($inner);
 
-  const render = () => {
+  const render = async () => {
     const sTop = $virtualList.scrollTop;
 
-    if (
-      sTop >
-      $virtualList.scrollHeight - $virtualList.clientHeight - THRESHOLD
-    ) {
-      onRequestRows();
+    const requestMoreOffset =
+      $virtualList.scrollHeight - $virtualList.clientHeight - THRESHOLD;
+
+    if (sTop >= requestMoreOffset) {
+      logger.log("Requesting more lines");
+      await onRequestRows();
     }
 
     const topNum = Math.floor(sTop / itemHeight);
@@ -71,6 +75,7 @@ export const createVirtualList = ({
   };
 
   $virtualList.addEventListener("scroll", () => render());
+  logger.log("Attached virtual list listener");
 
   return { $virtualList, $inner, updateRowCount, onPaint };
 };

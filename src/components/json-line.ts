@@ -4,7 +4,7 @@ import styles from "./json-line.module.scss";
 const IDENTATION_SPACING = 15;
 const IDENTATION_LINE_OFFSET = 2;
 
-const isValueBracket = (value: string) => {
+const isValueABracket = (value: string) => {
   const firstChar = value[0];
 
   return (
@@ -66,14 +66,16 @@ export const createListItem = (line: JsonLine) => {
     $span.appendChild($objectKey);
     $span.appendChild($colon);
 
-    if (isValueBracket(value)) $value.classList.add(styles.bracket);
+    if (isValueABracket(value)) $value.classList.add(styles.bracket);
     $value.textContent = value;
+    $span.appendChild($value);
   } else {
-    if (isValueBracket(content)) $value.classList.add(styles.bracket);
-    $value.textContent = content.endsWith(",") ? content.slice(0, -1) : content;
-  }
+    if (isValueABracket(content)) $value.classList.add(styles.bracket);
 
-  $span.appendChild($value);
+    $value.textContent = content.endsWith(",") ? content.slice(0, -1) : content;
+
+    $span.appendChild($value);
+  }
 
   $li.appendChild($span);
 

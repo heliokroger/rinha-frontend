@@ -20,9 +20,23 @@ const clearNotifications = () => {
   }
 };
 
+const state = { start: 0 };
+
+const { $treeViewer, setFile } = createTreeViewer(() => {
+  $notificationContainer.appendChild(
+    createPerformanceNotification(
+      `⏰ rendered first chunk in `,
+      performance.now() - state.start
+    )
+  );
+});
+$root.appendChild($treeViewer);
+
 $fileInput.onchange = (event: Event) => {
-  const start = performance.now();
+  state.start = performance.now();
+
   clearNotifications();
+
   const target = event.target as HTMLInputElement;
 
   if (target.files && target.files.length) {
@@ -30,16 +44,7 @@ $fileInput.onchange = (event: Event) => {
 
     $fileSelectionContainer.style.display = "none";
 
-    createTreeViewer(file).then(($treeViewer) => {
-      $root.appendChild($treeViewer);
-
-      $notificationContainer.appendChild(
-        createPerformanceNotification(
-          `⏰ rendered first chunk in: `,
-          performance.now() - start
-        )
-      );
-    });
+    setFile(file);
 
     validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
       if (!event.data) {
@@ -51,8 +56,8 @@ $fileInput.onchange = (event: Event) => {
 
       $notificationContainer.appendChild(
         createPerformanceNotification(
-          `⏰ fully parsed json in: `,
-          performance.now() - start
+          `⏰ fully parsed json in `,
+          performance.now() - state.start
         )
       );
 

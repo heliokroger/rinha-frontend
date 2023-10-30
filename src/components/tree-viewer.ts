@@ -4,35 +4,12 @@ import styles from "./tree-viewer.module.scss";
 import { createVirtualList } from "./virtual-list";
 import type { JsonLine } from "../types";
 
-const LINES_PER_BATCH = 100;
 const ITEM_HEIGHT = 20;
+const MIN_NUM_OF_ROWS = 100;
 
-type State = {
-  numberOfRows: number;
-  lineMemo: Map<JsonLine, string>;
-};
-
-export const createTreeViewer = async (file: File) => {
-  const state: State = {
-    numberOfRows: LINES_PER_BATCH,
+export const createTreeViewer = (onRenderFirstBatch: () => void) => {
+  const state = {
     lineMemo: new Map<JsonLine, string>(),
-  };
-
-  const getListItems = (itemsPerPage: number) => {
-    const fragment = document.createDocumentFragment();
-
-    for (let i = 0; i < itemsPerPage; i++) {
-      const line = parserState.lines[i];
-      if (!line) break;
-
-      const $li = createListItem(line);
-
-      state.lineMemo.set(line, $li.innerHTML);
-
-      fragment.appendChild($li);
-    }
-
-    return fragment;
   };
 
   const $section = document.createElement("section");
@@ -40,7 +17,6 @@ export const createTreeViewer = async (file: File) => {
 
   const $fileName = document.createElement("h2");
   $fileName.className = styles["file-name"];
-  $fileName.textContent = file.name;
 
   $section.appendChild($fileName);
 
@@ -49,25 +25,33 @@ export const createTreeViewer = async (file: File) => {
     renderRow: (index) => {
       const line = parserState.lines[index];
 
-      if (state.lineMemo.has(line)) {
-        return state.lineMemo.get(line)!;
-      }
+      if (state.lineMemo.has(line)) return state.lineMemo.get(line)!;
 
       const $li = createListItem(line);
-
       state.lineMemo.set(line, $li.innerHTML);
 
       return $li.innerHTML;
     },
     renderFirstBatch: (itemsPerPage) => {
-      $inner.appendChild(getListItems(itemsPerPage));
-    },
-    onRequestRows: () => {
-      state.numberOfRows += LINES_PER_BATCH;
+      const fragment = document.createDocumentFragment();
 
-      parseJson({
+      for (let i = 0; i < itemsPerPage; i++) {
+        const line = parserState.lines[i];
+
+        if (!line) break;
+
+        const $li = createListItem(line);
+        state.lineMemo.set(line, $li.innerHTML);
+
+        fragment.appendChild($li);
+      }
+
+      $inner.appendChild(fragment);
+      onRenderFirstBatch();
+    },
+    onRequestRows: async () => {
+      return parseJson({
         reset: false,
-        numberOfRows: state.numberOfRows,
       }).then(() => {
         updateRowCount(parserState.lines.length);
       });
@@ -76,15 +60,18 @@ export const createTreeViewer = async (file: File) => {
 
   $section.appendChild($virtualList);
 
-  return parseJson({
-    reset: true,
-    file,
-    numberOfRows: LINES_PER_BATCH,
-  }).then(() => {
-    updateRowCount(parserState.lines.length);
+  const setFile = (file: File) => {
+    $fileName.textContent = file.name;
 
-    requestAnimationFrame(() => onPaint());
+    parseJson({
+      reset: true,
+      minNumOfRows: MIN_NUM_OF_ROWS,
+      file,
+    }).then(() => {
+      updateRowCount(parserState.lines.length);
+      onPaint();
+    });
+  };
 
-    return $section;
-  });
+  return { $treeViewer: $section, setFile };
 };
