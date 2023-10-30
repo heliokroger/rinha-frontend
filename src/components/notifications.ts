@@ -7,11 +7,11 @@ export const formatTime = (ms: number) => {
 export const createPerformanceNotification = (message: string, ms?: number) => {
   const $p = document.createElement("p");
 
-  $p.innerText = message;
+  $p.appendChild(document.createTextNode(message));
 
   if (ms) {
     const $span = document.createElement("span");
-    $span.innerText = formatTime(ms);
+    $span.appendChild(document.createTextNode(formatTime(ms)));
     $span.className = "bold";
 
     $p.appendChild($span);

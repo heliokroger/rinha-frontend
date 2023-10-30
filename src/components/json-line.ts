@@ -46,7 +46,7 @@ export const createListItem = (line: JsonLine) => {
   if (arrayIndex !== undefined) {
     const $arrayIndex = document.createElement("span");
     $arrayIndex.className = styles["array-index"];
-    $arrayIndex.textContent = `${arrayIndex}: `;
+    $arrayIndex.appendChild(document.createTextNode(`${arrayIndex}: `));
 
     $span.appendChild($arrayIndex);
   }
@@ -58,22 +58,25 @@ export const createListItem = (line: JsonLine) => {
     const [, key, value] = tokens;
     const $objectKey = document.createElement("span");
     $objectKey.className = styles["object-key"];
-    $objectKey.textContent = key;
+    $objectKey.appendChild(document.createTextNode(key));
 
     const $colon = document.createElement("span");
-    $colon.textContent = ": ";
+    $colon.appendChild(document.createTextNode(": "));
 
     $span.appendChild($objectKey);
     $span.appendChild($colon);
 
     if (isValueABracket(value)) $value.classList.add(styles.bracket);
-    $value.textContent = value;
-
+    $value.appendChild(document.createTextNode(value));
     $span.appendChild($value);
   } else {
     if (isValueABracket(content)) $value.classList.add(styles.bracket);
 
-    $value.textContent = content.endsWith(",") ? content.slice(0, -1) : content;
+    $value.appendChild(
+      document.createTextNode(
+        content.endsWith(",") ? content.slice(0, -1) : content
+      )
+    );
 
     $span.appendChild($value);
   }

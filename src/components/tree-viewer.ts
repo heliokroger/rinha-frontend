@@ -61,7 +61,7 @@ export const createTreeViewer = (onRenderFirstBatch: () => void) => {
   $section.appendChild($virtualList);
 
   const setFile = (file: File) => {
-    $fileName.textContent = file.name;
+    $fileName.appendChild(document.createTextNode(file.name));
 
     parseJson({
       reset: true,
