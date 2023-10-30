@@ -135,8 +135,7 @@ const convertChunkToLines = (chunk: string): JsonLine[] => {
     }
 
     /* Toggle string mode */
-    if (!prevContent.endsWith("\\") && token === '"')
-      state.isInsideString = !state.isInsideString;
+    if (token === '"') state.isInsideString = !state.isInsideString;
   }
 
   return lines;

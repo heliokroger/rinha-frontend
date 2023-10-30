@@ -68,6 +68,7 @@ export const createListItem = (line: JsonLine) => {
 
     if (isValueABracket(value)) $value.classList.add(styles.bracket);
     $value.textContent = value;
+
     $span.appendChild($value);
   } else {
     if (isValueABracket(content)) $value.classList.add(styles.bracket);
