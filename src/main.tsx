@@ -1,6 +1,6 @@
 import { createPerformanceNotification } from "./components/notifications";
 import { createTreeViewer } from "./components/tree-viewer";
-import { validateJsonWorker } from "./workers";
+import { createValidateJsonWorker } from "./workers";
 
 const $fileInput = document.getElementById("file-input")!;
 const $root = document.getElementById("root")!;
@@ -38,17 +38,14 @@ const attachTreeViewer = () => {
 const state: {
   start: number;
   treeViewer: ReturnType<typeof createTreeViewer>;
-} = { start: 0, treeViewer: attachTreeViewer() };
+  validateJsonWorker: Worker;
+} = {
+  start: 0,
+  treeViewer: attachTreeViewer(),
+  validateJsonWorker: createValidateJsonWorker(),
+};
 
-validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
-  if (!event.data) {
-    $fileSelectionContainer.style.display = "flex";
-    $root.innerHTML = "";
-    state.treeViewer = attachTreeViewer();
-
-    $error.style.display = "block";
-  }
-
+state.validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
   $notificationContainer.appendChild(
     createPerformanceNotification(
       `⏰ fully parsed json in `,
@@ -56,7 +53,16 @@ validateJsonWorker.onmessage = (event: MessageEvent<boolean>) => {
     )
   );
 
-  validateJsonWorker.onmessage = null;
+  state.validateJsonWorker.terminate();
+
+  if (!event.data) {
+    $fileSelectionContainer.style.display = "flex";
+    $root.innerHTML = "";
+    state.treeViewer = attachTreeViewer();
+    state.validateJsonWorker = createValidateJsonWorker();
+
+    $error.style.display = "block";
+  }
 };
 
 $fileInput.onchange = (event: Event) => {
@@ -72,6 +78,6 @@ $fileInput.onchange = (event: Event) => {
     $fileSelectionContainer.style.display = "none";
     state.treeViewer.setFile(file);
 
-    validateJsonWorker.postMessage(file);
+    state.validateJsonWorker.postMessage(file);
   }
 };
