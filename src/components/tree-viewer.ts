@@ -1,10 +1,11 @@
-import { createListItem, createListItemElement } from "./json-line";
+import { createListItem } from "./json-line";
 import { parseJson, state as parserState } from "../parse-json";
 import styles from "./tree-viewer.module.scss";
 import { createVirtualList } from "./virtual-list";
 import { commonLinesMemo, getMemoKey } from "../lines-memo";
 
 const ITEM_HEIGHT = 20;
+const MIN_NUM_OF_ROWS = 70;
 
 export const createTreeViewer = (onRenderFirstBatch: () => void) => {
   const state = {
@@ -19,12 +20,7 @@ export const createTreeViewer = (onRenderFirstBatch: () => void) => {
 
   $section.appendChild($fileName);
 
-  const {
-    $virtualList,
-    updateRowCount,
-    state: virtualListState,
-    onPaint,
-  } = createVirtualList({
+  const { $virtualList, updateRowCount, onPaint } = createVirtualList({
     itemHeight: ITEM_HEIGHT,
     renderRow: (index) => {
       const line = parserState.lines[index];
@@ -37,13 +33,21 @@ export const createTreeViewer = (onRenderFirstBatch: () => void) => {
 
       return $li.innerHTML;
     },
-    renderPlaceholderItems(itemsPerPage) {
+    renderFirstBatch: (itemsPerPage) => {
       const fragment = document.createDocumentFragment();
 
       for (let i = 0; i < itemsPerPage; i++) {
-        const $li = createListItemElement();
+        const line = parserState.lines[i];
+        if (!line) break;
+        const memoKey = getMemoKey(line);
+
+        const $li = createListItem(line);
+        state.lineMemo.set(memoKey, $li.innerHTML);
+
         fragment.appendChild($li);
       }
+
+      setTimeout(onRenderFirstBatch);
 
       return fragment;
     },
@@ -57,38 +61,17 @@ export const createTreeViewer = (onRenderFirstBatch: () => void) => {
   });
 
   $section.appendChild($virtualList);
-  requestAnimationFrame(() => onPaint());
 
   const setFile = (file: File) => {
     $fileName.appendChild(document.createTextNode(file.name));
 
     parseJson({
       reset: true,
-      minNumOfRows: virtualListState.itemsPerPage,
+      minNumOfRows: MIN_NUM_OF_ROWS,
       file,
     }).then(() => {
       updateRowCount(parserState.lines.length);
-
-      for (let i = 0; i < virtualListState.itemsPerPage; i++) {
-        const line = parserState.lines[i];
-        if (!line) break;
-
-        const memoKey = getMemoKey(line);
-
-        if (state.lineMemo.has(memoKey)) {
-          virtualListState.listItems[i].innerHTML =
-            state.lineMemo.get(memoKey)!;
-
-          continue;
-        }
-
-        const $li = createListItem(line);
-        state.lineMemo.set(memoKey, $li.innerHTML);
-
-        virtualListState.listItems[i].innerHTML = $li.innerHTML;
-      }
-
-      onRenderFirstBatch();
+      onPaint();
     });
   };
 

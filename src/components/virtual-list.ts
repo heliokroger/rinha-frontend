@@ -5,7 +5,7 @@ const THRESHOLD = 50;
 
 type Arguments = {
   itemHeight: number;
-  renderPlaceholderItems: (itemsPerPage: number) => DocumentFragment;
+  renderFirstBatch: (itemsPerPage: number) => DocumentFragment;
   renderRow: (index: number) => string;
   onRequestRows: () => Promise<void> | void;
 };
@@ -14,8 +14,8 @@ const logger = new Logger("VIRTUAL LIST");
 
 export const createVirtualList = ({
   itemHeight,
+  renderFirstBatch,
   renderRow,
-  renderPlaceholderItems,
   onRequestRows,
 }: Arguments) => {
   const state = { itemsPerPage: 0, listItems: [] as Element[] };
@@ -51,10 +51,8 @@ export const createVirtualList = ({
     const offset = Math.max(topNum, 0);
     $inner.style.transform = `translateY(${sTop - remainingPx}px)`;
 
-    const children = Array.from($inner.children);
-
-    for (let i = 0; i < children.length; i++) {
-      const $child = children[i];
+    for (let i = 0; i < state.listItems.length; i++) {
+      const $child = state.listItems[i];
       $child.innerHTML = renderRow(offset + i);
     }
   };
@@ -71,8 +69,7 @@ export const createVirtualList = ({
     state.itemsPerPage = Math.ceil($virtualList.clientHeight / itemHeight);
     $inner.style.height = `${state.itemsPerPage * itemHeight}px`;
 
-    const fragment = renderPlaceholderItems(state.itemsPerPage);
-
+    const fragment = renderFirstBatch(state.itemsPerPage);
     state.listItems = Array.from(fragment.children);
 
     $inner.appendChild(fragment);
@@ -81,5 +78,5 @@ export const createVirtualList = ({
   $virtualList.addEventListener("scroll", () => render());
   logger.log("Attached virtual list listener");
 
-  return { $virtualList, state, updateRowCount, onPaint };
+  return { $virtualList, updateRowCount, onPaint };
 };
