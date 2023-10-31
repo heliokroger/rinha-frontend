@@ -58,13 +58,9 @@ export const createListItem = (line: JsonLine) => {
     const [, key, value] = tokens;
     const $objectKey = document.createElement("span");
     $objectKey.className = styles["object-key"];
-    $objectKey.appendChild(document.createTextNode(key));
-
-    const $colon = document.createElement("span");
-    $colon.appendChild(document.createTextNode(": "));
+    $objectKey.appendChild(document.createTextNode(`${key}: `));
 
     $span.appendChild($objectKey);
-    $span.appendChild($colon);
 
     if (isValueABracket(value)) $value.classList.add(styles.bracket);
     $value.appendChild(document.createTextNode(value));
