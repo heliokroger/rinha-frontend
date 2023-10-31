@@ -5,7 +5,7 @@ const THRESHOLD = 50;
 
 type Arguments = {
   itemHeight: number;
-  renderFirstBatch: (itemsPerPage: number) => void;
+  renderPlaceholderItems: (itemsPerPage: number) => DocumentFragment;
   renderRow: (index: number) => string;
   onRequestRows: () => Promise<void> | void;
 };
@@ -14,11 +14,11 @@ const logger = new Logger("VIRTUAL LIST");
 
 export const createVirtualList = ({
   itemHeight,
-  renderFirstBatch,
   renderRow,
+  renderPlaceholderItems,
   onRequestRows,
 }: Arguments) => {
-  const state = { itemsPerPage: 0 };
+  const state = { itemsPerPage: 0, listItems: [] as Element[] };
 
   const $virtualList = document.createElement("div");
   $virtualList.tabIndex = 0;
@@ -71,11 +71,15 @@ export const createVirtualList = ({
     state.itemsPerPage = Math.ceil($virtualList.clientHeight / itemHeight);
     $inner.style.height = `${state.itemsPerPage * itemHeight}px`;
 
-    renderFirstBatch(state.itemsPerPage);
+    const fragment = renderPlaceholderItems(state.itemsPerPage);
+
+    state.listItems = Array.from(fragment.children);
+
+    $inner.appendChild(fragment);
   };
 
   $virtualList.addEventListener("scroll", () => render());
   logger.log("Attached virtual list listener");
 
-  return { $virtualList, $inner, updateRowCount, onPaint };
+  return { $virtualList, state, updateRowCount, onPaint };
 };

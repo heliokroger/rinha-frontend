@@ -15,11 +15,16 @@ const isValueABracket = (value: string) => {
   );
 };
 
+export const createListItemElement = () => {
+  const $li = document.createElement("li");
+  $li.className = styles.line;
+  return $li;
+};
+
 export const createListItem = (line: JsonLine) => {
   const { content, nestLevel, arrayIndex } = line;
 
-  const $li = document.createElement("li");
-  $li.className = styles.line;
+  const $li = createListItemElement();
 
   const tokens =
     /"(.*)":\s?(".*"|-?[0-9]+(.?[0-9]+)?|null|true|false|{|\[)(,)?/gm.exec(
